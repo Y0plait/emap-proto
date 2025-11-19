@@ -1,0 +1,38 @@
+---
+
+stages:
+  - build
+  - docs
+  - deploy
+
+build-job:
+  stage: build
+  image: xarnia/alpine-doxygen
+  script:
+    - make
+  artifacts:
+    paths:
+      - output/
+    expire_in: 1 week
+  
+docs-job:
+  stage: docs
+  image: xarnia/alpine-doxygen
+  script:
+    - make documentation
+  artifacts:
+    paths:
+      - docs/html
+    expire_in: 1 week
+
+pages:
+  stage: deploy
+  script:
+    - mkdir public
+    - cp -r docs/html/* public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+  
