@@ -1,9 +1,9 @@
 #include <stdio.h>
 
-#include "types.h"
+#include "../include/types.h"
 
 int main() {
-    enum EMAP_Code G_ACK = GENERAL_ACK;
-    printf("%d\n", G_ACK);
+    printf("%d\n", EMAP_MSG_GAME_END);
+    printf("%d\n", EMAP_MSG_GAME_JOIN);
     return 0;
 }
