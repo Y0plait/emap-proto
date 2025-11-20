@@ -5,6 +5,9 @@
 
 #define EMAP_BASE_TRANSPORT_PROTOCOL "TCP" /* To be used with getprotobyname() */
 
+#define TOTAL_SKIN_AMOUNT 6
+#define MAX_PLAYER_USERNAME_SIZE 16
+
 #define EMAP_MAGIC_BYTE_0 'E'
 #define EMAP_MAGIC_BYTE_1 'M'
 #define EMAP_PROTO_VERSION 1
@@ -14,6 +17,18 @@ typedef enum EMAP_PlayType {
     EMAP_PLAY_NOT_YOUR_TURN = 0,
     EMAP_PLAY_YOUR_TURN = 1
 } EMAP_PlayType;
+
+/* EMAP End Game Types */
+typedef enum EMAP_EndGameType {
+    EMAP_END_GAME_LOSE = 0,
+    EMAP_END_GAME_WIN = 1
+} EMAP_EndGameType;
+
+/* EMAP General ACK Types */
+typedef enum EMAP_GeneralACKTypes {
+    EMAP_MESSAGE_ACK_NOK = 0,
+    EMAP_MESSAGE_ACK_OK = 1
+} EMAP_GeneralACKTypes;
 
 /* EMAP Message Types */
 typedef enum EMAP_MessageType {
@@ -48,29 +63,76 @@ typedef struct EMAP_PacketHeader {
     uint16_t size; /* Packet payload size */
 } EMAP_PacketHeader;
 
-typedef struct EMAP_Packet {
+/* EMAP Packet Types */
+/* EMAP Packet for GAME_STATE message */
+typedef struct EMAP_GeneralPacket {
     EMAP_PacketHeader packet_header;
     uint8_t payload;
 } EMAP_Packet;
 
-/* Payload Types */
-/* EMAP Payload for MOVE message */
-typedef struct EMAP_PayloadMove {
+/* EMAP Packet for GENERAL_ACK message */
+typedef struct EMAP_GeneralACK {
+    EMAP_PacketHeader packet_header;
+    uint8_t ack_type; /* EMAP_GeneralACKTypes (1: good, 0: not good)*/
+};
+
+/* EMAP Packet for CONNECT message */
+typedef struct EMAP_Connect {
+    EMAP_PacketHeader packet_header;
+    uint16_t username[MAX_PLAYER_USERNAME_SIZE]; 
+};
+
+/* EMAP Packet for GAME_JOIN message */
+typedef struct EMAP_GameJoin {
+    EMAP_PacketHeader packet_header;
+    /* No payload needed */
+};
+
+/* EMAP Packet for GAME_STATE message */
+typedef struct EMAP_GameStart {
+    EMAP_PacketHeader packet_header;
+    uint8_t is_starting; /* EMAP_PlayType */
+};
+
+/* EMAP Packet for GAME_END message */
+typedef struct EMAP_GameEnd {
+    EMAP_PacketHeader packet_header;
+    uint8_t has_won; /* EMAP_GameEndType */
+};
+
+/* EMAP Packet for GAME_WAIT message */
+typedef struct EMAP_GameWait {
+    EMAP_PacketHeader packet_header;
+    /* No payload needed */
+};
+
+/* EMAP Packet for GAME_STATE message */
+typedef struct EMAP_GameState {
+    EMAP_PacketHeader packet_header;
+
+};
+
+/* EMAP Packet for MOVE message */
+typedef struct EMAP_Move {
+    EMAP_PacketHeader packet_header;
     uint8_t coin_index; /* Which coin are we moving ? */
     uint8_t coin_pos; /* Where do we move the coin ? */
-} EMAP_PayloadMove;
+};
 
-/* EMAP Payload for PLAY message */
-typedef struct EMAP_PayloadPlay {
+/* EMAP Packet for PLAY message */
+typedef struct EMAP_Play {
+    EMAP_PacketHeader packet_header;
     EMAP_PlayType play_type; /* Your turn or not (1/0) */
-} EMAP_PayloadPlay;
+};
 
-/* EMAP Payload for PLAYER_INFO message */
-typedef struct EMAP_PayloadPlayerInfo {
+/* EMAP Packet for PLAYER_INFO message */
+typedef struct EMAP_PlayerInfo {
+    EMAP_PacketHeader packet_header;
     uint8_t level; /* Level range: 0-255 */
     uint16_t progression; /* State of advancement in a level, max 1000 */
     uint16_t money; /* Money owned, max 2^16-1 */
-} EMAP_PayloadPlayerInfo;
+    uint8_t possessed_skins[TOTAL_SKIN_AMOUNT]; /* Skin are in an array (of size TOTAL_SKIN_AMOUNT)*/
+};
 
 #pragma pack(pop)
 
