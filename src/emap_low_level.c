@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <errno.h>
 
 #include "../include/emap_low_level.h"
 
@@ -10,11 +11,11 @@
  * the transport layer fragments the message in multiple packets.
  *
  * @param[in]  socket  A system network socket (AF_INET, SOCK_STREAM preferably)
- * @param[in] buf  pointer 
- * @param[in] len [Description of parameter modified by the function]
+ * @param[in] buf  pointer to a buffer
+ * @param[in] len size of the buffer
  *
  * @return Return an integer associated to the state of the send process
- * @retval 0    Success, all data was sent
+ * @retval >0    Success, all data was sent, return is size of data transmitted
  * @retval <0   Error, not all data was sent
  *
  * @note  [Any additional notes, performance characteristics, or pitfalls]
@@ -23,27 +24,44 @@
  *
  * @see https://beej.us/guide/bgnet/html/split/slightly-advanced-techniques.html
  */
-int emap_send_all(int socket, char *buf, int *len) {
-    int total_sent = 0; /* How many bytes we have sent */
-    int left_bytes = *len; /* How many bytes are left to send */
-    int counter; /* Counter for the amount of bytes sent */
+ssize_t send_all(int sock, const void *buf, size_t buf_len) {
+    size_t total = 0;
+    const uint8_t *ptr = buf;
 
-    /*
-     *
-     * While we have not sent all the bytes of the buffer, don't stop sending.
-     * As we have the message length in the EMAP header we can decode the message
-     * even if it is distributed on multiple packets.
-     */
-    while (total_sent < *len) {
-        counter = send(socket, buf+total_sent, left_bytes, 0);
-        if (counter == -1) {
-            break;
+    while (total < buf_len) {
+        ssize_t n = send(sock, ptr + total, buf_len - total, 0);
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue; /* interrup­tion, on réessaie */
+            }
+            return -1;    /* vraie erreur */
         }
-        total_sent += counter;
-        left_bytes -= counter;
+        if (n == 0) {
+            /* socket fermé */
+            return 0;
+        }
+        total += (size_t)n;
     }
+    return (ssize_t)total;
+}
 
-    *len = total_sent;
+ssize_t emap_recv_all(int sock, void *buf, size_t buf_len) {
+    size_t total = 0;
+    uint8_t *ptr = buf;
 
-    return counter==-1 ? -1 : 0; /* return -1 on failure, 0 on success (ternary operators) */
+    while (total < buf_len) {
+        ssize_t n = recv(sock, ptr + total, buf_len - total, 0);
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return -1;
+        }
+        if (n == 0) {
+            /* socket fermé proprement */
+            return 0;
+        }
+        total += (size_t)n;
+    }
+    return (ssize_t)total;
 }
