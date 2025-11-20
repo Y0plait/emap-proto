@@ -63,71 +63,60 @@ typedef struct EMAP_PacketHeader {
     uint16_t size; /* Packet payload size */
 } EMAP_PacketHeader;
 
-/* EMAP Packet Types */
-/* EMAP Packet for GAME_STATE message */
+/* EMAP Payload Types */
+/* EMAP Payload for general message */
 typedef struct EMAP_GeneralPacket {
-    EMAP_PacketHeader packet_header;
     uint8_t payload;
 } EMAP_Packet;
 
-/* EMAP Packet for GENERAL_ACK message */
+/* EMAP Payload for GENERAL_ACK message */
 typedef struct EMAP_GeneralACK {
-    EMAP_PacketHeader packet_header;
     uint8_t ack_type; /* EMAP_GeneralACKTypes (1: good, 0: not good)*/
 };
 
-/* EMAP Packet for CONNECT message */
+/* EMAP Payload for CONNECT message */
 typedef struct EMAP_Connect {
-    EMAP_PacketHeader packet_header;
     uint16_t username[MAX_PLAYER_USERNAME_SIZE]; 
 };
 
-/* EMAP Packet for GAME_JOIN message */
+/* EMAP Payload for GAME_JOIN message */
 typedef struct EMAP_GameJoin {
-    EMAP_PacketHeader packet_header;
     /* No payload needed */
 };
 
-/* EMAP Packet for GAME_STATE message */
+/* EMAP Payload for GAME_STATE message */
 typedef struct EMAP_GameStart {
-    EMAP_PacketHeader packet_header;
     uint8_t is_starting; /* EMAP_PlayType */
 };
 
-/* EMAP Packet for GAME_END message */
+/* EMAP Payload for GAME_END message */
 typedef struct EMAP_GameEnd {
-    EMAP_PacketHeader packet_header;
     uint8_t has_won; /* EMAP_GameEndType */
 };
 
-/* EMAP Packet for GAME_WAIT message */
+/* EMAP Payload for GAME_WAIT message */
 typedef struct EMAP_GameWait {
-    EMAP_PacketHeader packet_header;
     /* No payload needed */
 };
 
-/* EMAP Packet for GAME_STATE message */
+/* EMAP Payload for GAME_STATE message */
 typedef struct EMAP_GameState {
-    EMAP_PacketHeader packet_header;
-
+    /* No payload needed */
 };
 
-/* EMAP Packet for MOVE message */
+/* EMAP Payload for MOVE message */
 typedef struct EMAP_Move {
-    EMAP_PacketHeader packet_header;
     uint8_t coin_index; /* Which coin are we moving ? */
     uint8_t coin_pos; /* Where do we move the coin ? */
 };
 
-/* EMAP Packet for PLAY message */
+/* EMAP Payload for PLAY message */
 typedef struct EMAP_Play {
-    EMAP_PacketHeader packet_header;
     EMAP_PlayType play_type; /* Your turn or not (1/0) */
 };
 
-/* EMAP Packet for PLAYER_INFO message */
+/* EMAP Payload for PLAYER_INFO message */
 typedef struct EMAP_PlayerInfo {
-    EMAP_PacketHeader packet_header;
     uint8_t level; /* Level range: 0-255 */
     uint16_t progression; /* State of advancement in a level, max 1000 */
     uint16_t money; /* Money owned, max 2^16-1 */
