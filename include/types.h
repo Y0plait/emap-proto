@@ -13,7 +13,7 @@
 /**
  * @brief Player turn state used inside @ref EMAP_PayloadGameStart and @ref EMAP_PayloadPlay.
  */
-typedef enum EMAP_PlayType {
+typedef enum {
     EMAP_PLAY_NOT_YOUR_TURN = 0, /**< Another participant is expected to act. */
     EMAP_PLAY_YOUR_TURN = 1      /**< The local player must act now. */
 } EMAP_PlayType;
@@ -21,7 +21,7 @@ typedef enum EMAP_PlayType {
 /**
  * @brief Result of a finished game session.
  */
-typedef enum EMAP_EndGameType {
+typedef enum {
     EMAP_END_GAME_LOSE = 0, /**< The local player lost. */
     EMAP_END_GAME_WIN = 1   /**< The local player won. */
 } EMAP_EndGameType;
@@ -29,7 +29,7 @@ typedef enum EMAP_EndGameType {
 /**
  * @brief Generic acknowledgement payload values shared by most request/response pairs.
  */
-typedef enum EMAP_GeneralACKTypes {
+typedef enum {
     EMAP_MESSAGE_ACK_NOK = 0, /**< Command rejected or failed. */
     EMAP_MESSAGE_ACK_OK = 1   /**< Command accepted or succeeded. */
 } EMAP_GeneralACKTypes;
@@ -37,7 +37,7 @@ typedef enum EMAP_GeneralACKTypes {
 /**
  * @brief On-the-wire message identifiers.
  */
-typedef enum EMAP_MessageType {
+typedef enum {
     EMAP_MSG_GENERAL_ACK = 0x01, /**< Generic acknowledgement. */
     EMAP_MSG_CONNECT = 0x02,     /**< Initial client handshake carrying identity. */
     EMAP_MSG_GAME_JOIN = 0x03,   /**< Join matchmaking queue or lobby. */
@@ -58,7 +58,7 @@ typedef enum EMAP_MessageType {
  * routines in @ref emap_high_level.c.
  */
 #pragma pack(push, 1)
-typedef struct EMAP_PacketHeader {
+typedef struct {
     uint8_t magic_byte[2]; /**< Synchronization bytes: @ref EMAP_MAGIC_BYTE_0, @ref EMAP_MAGIC_BYTE_1. */
     uint8_t version;       /**< Protocol version, see @ref EMAP_PROTO_VERSION. */
     uint8_t code;          /**< Message code, one of @ref EMAP_MessageType. */
@@ -68,7 +68,7 @@ typedef struct EMAP_PacketHeader {
 /**
  * @brief Generic one-byte payload used for tests and very small messages.
  */
-typedef struct EMAP_GeneralPacket {
+typedef struct {
     uint8_t payload; /**< Single-byte payload. */
 } EMAP_GeneralPacket;
 
@@ -82,49 +82,49 @@ typedef struct {
 /**
  * @brief Payload for @ref EMAP_MSG_CONNECT.
  */
-typedef struct EMAP_PayloadConnect {
+typedef struct {
     uint8_t username[MAX_PLAYER_USERNAME_SIZE]; /**< Raw username (not null-terminated on the wire). */
 } EMAP_PayloadConnect;
 
 /**
  * @brief Payload for @ref EMAP_MSG_GAME_JOIN.
  */
-typedef struct EMAP_PayloadGameJoin {
+typedef struct {
     /* Intentionally empty; keep payload-less semantic. */
 } EMAP_PayloadGameJoin;
 
 /**
  * @brief Payload for @ref EMAP_MSG_GAME_START.
  */
-typedef struct EMAP_PayloadGameStart {
+typedef struct {
     uint8_t is_starting; /**< Value from @ref EMAP_PlayType indicating turn order. */
 } EMAP_PayloadGameStart;
 
 /**
  * @brief Payload for @ref EMAP_MSG_GAME_END.
  */
-typedef struct EMAP_PayloadGameEnd {
+typedef struct {
     uint8_t has_won; /**< Value from @ref EMAP_EndGameType describing the outcome. */
 } EMAP_PayloadGameEnd;
 
 /**
  * @brief Payload for @ref EMAP_MSG_GAME_WAIT.
  */
-typedef struct EMAP_PayloadGameWait {
+typedef struct {
     /* Intentionally empty; keep payload-less semantic. */
 } EMAP_PayloadGameWait;
 
 /**
  * @brief Payload for @ref EMAP_MSG_GAME_STATE.
  */
-typedef struct EMAP_PayloadGameState {
+typedef struct {
     /* Intentionally empty; future game state fields will extend this struct. */
 } EMAP_PayloadGameState;
 
 /**
  * @brief Payload for @ref EMAP_MSG_MOVE.
  */
-typedef struct EMAP_PayloadMove {
+typedef struct {
     uint8_t coin_index; /**< Selected coin index. */
     uint8_t coin_pos;   /**< Target board position. */
 } EMAP_PayloadMove;
@@ -132,14 +132,14 @@ typedef struct EMAP_PayloadMove {
 /**
  * @brief Payload for @ref EMAP_MSG_PLAY.
  */
-typedef struct EMAP_PayloadPlay {
+typedef struct {
     uint8_t play_type; /**< Value from @ref EMAP_PlayType indicating turn ownership. */
 } EMAP_PayloadPlay;
 
 /**
  * @brief Payload for @ref EMAP_MSG_PLAYER_INFO.
  */
-typedef struct EMAP_PayloadPlayerInfo {
+typedef struct {
     uint8_t level;                                /**< Player level [0,255]. */
     uint16_t progression;                         /**< Progress toward next level (network order). */
     uint16_t money;                               /**< Currency owned (network order). */
