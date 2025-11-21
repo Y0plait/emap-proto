@@ -44,6 +44,10 @@ RM = rm -f
 MD	:= mkdir -p
 endif
 
+TEST_MAIN       := emap_tests
+TEST_OUTPUT     := $(call FIXPATH,$(OUTPUT)/$(TEST_MAIN))
+TEST_SOURCES    := tests/test_emap.c $(SRC)/emap_high_level.c $(SRC)/emap_low_level.c
+
 # define any directories containing header files other than /usr/include
 INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%))
 
@@ -76,6 +80,13 @@ $(OUTPUT):
 $(MAIN): $(OBJECTS) 
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(OUTPUTMAIN) $(OBJECTS) $(LFLAGS) $(LIBS)
 
+$(TEST_OUTPUT): $(TEST_SOURCES)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST_OUTPUT) $(TEST_SOURCES) $(LFLAGS) $(LIBS)
+
+test: $(OUTPUT) $(TEST_OUTPUT)
+	./$(TEST_OUTPUT)
+	@echo "Test suite completed"
+
 # include all .d files
 -include $(DEPS)
 
@@ -90,6 +101,7 @@ $(MAIN): $(OBJECTS)
 .PHONY: clean
 clean:
 	$(RM) $(OUTPUTMAIN)
+	$(RM) $(TEST_OUTPUT)
 	$(RM) $(call FIXPATH,$(OBJECTS))
 	$(RM) $(call FIXPATH,$(DEPS))
 	@echo Cleanup complete!

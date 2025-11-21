@@ -25,9 +25,9 @@
  * 
  * @see https://beej.us/guide/bgnet/html/split/slightly-advanced-techniques.html
  */
-ssize_t send_all(int sock, void *buf, size_t buf_len) {
+ssize_t emap_send_all(int sock, const void *buf, size_t buf_len) {
     size_t total = 0;
-    uint8_t *ptr = buf;
+    const uint8_t *ptr = buf;
 
     while (total < buf_len) {
         ssize_t n = send(sock, ptr + total, buf_len - total, 0);

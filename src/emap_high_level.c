@@ -1,0 +1,265 @@
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "../include/types.h"
+#include "../include/constants.h"
+#include "../include/emap_message.h"
+#include "../include/emap_low_level.h"
+
+int emap_send_packet(int sock, uint8_t msg_type, const void *payload, uint16_t payload_len)
+{
+    if (payload_len > 0 && payload == NULL)
+    {
+        return -1;
+    }
+
+    /* Craft packet header */
+    EMAP_PacketHeader packet_header;
+    packet_header.version = EMAP_PROTO_VERSION;
+    packet_header.magic_byte[0] = EMAP_MAGIC_BYTE_0;
+    packet_header.magic_byte[1] = EMAP_MAGIC_BYTE_1;
+    packet_header.code = msg_type;
+    packet_header.size = htons(payload_len); /* htonl if uint32_t */
+
+    /* Send header */
+    if (emap_send_all(sock, &packet_header, sizeof(packet_header)) <= 0)
+    {
+        return -1;
+    }
+
+    /* Send payload */
+    if (payload_len > 0 && payload != NULL)
+    {
+        if (emap_send_all(sock, payload, payload_len) <= 0)
+        {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int emap_recv_packet(int sock, uint8_t *type_out, void **payload_out, uint16_t *payload_len_out)
+{
+
+    /* Packet header struct to store incoming header data */
+    EMAP_PacketHeader in_packet_header;
+
+    /* Receive all from the socket, blocking call ! */
+    ssize_t con_state = emap_recv_all(sock, &in_packet_header, sizeof(in_packet_header));
+    if (con_state <= 0)
+    {
+        return -1;
+    }
+
+    /* Magic bytes matching test */
+    if (in_packet_header.magic_byte[0] != EMAP_MAGIC_BYTE_0 || in_packet_header.magic_byte[1] != EMAP_MAGIC_BYTE_1)
+    {
+        return -1;
+    }
+    /* Version test */
+    if (in_packet_header.version != EMAP_PROTO_VERSION)
+    {
+        return -1;
+    }
+
+    /* Big/Little-endian shenanigans */
+    uint16_t payload_len = ntohs(in_packet_header.size); /* ntohl if uint32_t */
+
+    if (payload_len > EMAP_MAX_PAYLOAD_SIZE)
+    {
+        return -1;
+    }
+
+    *type_out = in_packet_header.code;
+    *payload_len_out = payload_len;
+    *payload_out = NULL;
+
+    /* By default no payload */
+    uint8_t *payload = NULL;
+    if (payload_len > 0)
+    {
+        payload = malloc(payload_len);
+        if (!payload)
+        {
+            return -1;
+        }
+
+        con_state = emap_recv_all(sock, payload, payload_len);
+        if (con_state <= 0)
+        {
+            free(payload);
+            return -1;
+        }
+
+        *payload_out = payload;
+    }
+    return 0;
+}
+
+int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_len, EMAP_Message *out)
+{
+
+    const uint8_t *p = payload;
+    EMAP_MessageType type = (EMAP_MessageType)msg_type_raw;
+
+    out->type = type;
+
+    /* Match header code to the payload struct  */
+    switch (type)
+    {
+    case EMAP_MSG_GENERAL_ACK:
+    {
+        /* Payload: 1 byte -> ack_type (0/1) */
+        if (payload_len != sizeof(EMAP_PayloadGeneralACK))
+        {
+            return -1;
+        }
+        out->data.general_ack.ack_type = p[0]; /* 0 or 1 */
+        break;
+    }
+
+    case EMAP_MSG_MOVE:
+    {
+        /* Payload: 2 bytes: coin_index, coin_pos */
+        if (payload_len != sizeof(EMAP_PayloadMove))
+        {
+            return -1;
+        }
+        out->data.move.coin_index = p[0];
+        out->data.move.coin_pos = p[1];
+        break;
+    }
+
+    case EMAP_MSG_PLAY:
+    {
+        /* Payload: 1 byte: EMAP_PlayType (0/1) */
+        if (payload_len != sizeof(EMAP_PayloadPlay))
+        {
+            return -1;
+        }
+        /* On the wire we store 0/1. Interpret as EMAP_PlayType if you want. */
+        out->data.play.play_type = (EMAP_PlayType)p[0];
+        break;
+    }
+
+    case EMAP_MSG_PLAYER_INFO:
+    {
+        /* On wire:
+         *  byte 0: level (uint8_t)
+         *  byte 1-2: progression (uint16_t, network order)
+         *  byte 3-4: money       (uint16_t, network order)
+         *  byte 5..(5+TOTAL_SKIN_AMOUNT-1): possessed_skins[]
+         */
+        const size_t expected_len =
+            1   /* level */
+            + 2 /* progression */
+            + 2 /* money */
+            + TOTAL_SKIN_AMOUNT;
+        if (payload_len != expected_len)
+        {
+            return -1;
+        }
+
+        out->data.player_info.level = p[0];
+
+        uint16_t progression_net;
+        uint16_t money_net;
+
+        memcpy(&progression_net, &p[1], sizeof(progression_net));
+        memcpy(&money_net, &p[3], sizeof(money_net));
+        out->data.player_info.progression = ntohs(progression_net);
+        out->data.player_info.money = ntohs(money_net);
+
+        memcpy(out->data.player_info.possessed_skins,
+               &p[5],
+               TOTAL_SKIN_AMOUNT);
+
+        break;
+    }
+
+    case EMAP_MSG_CONNECT:
+    {
+        /* Depends on how you define the CONNECT payload.
+         * Let's say: username is fixed-size MAX_PLAYER_USERNAME_SIZE bytes.
+         */
+        if (payload_len > MAX_PLAYER_USERNAME_SIZE)
+        {
+            return -1;
+        }
+
+        /* IMPORTANT: in your on-wire struct use uint8_t/char, not uint16_t. */
+        memset(out->data.connect.username, 0, MAX_PLAYER_USERNAME_SIZE);
+        memcpy(out->data.connect.username, p, payload_len);
+        /* Now username is null-terminated (or padded) in the struct. */
+        break;
+    }
+
+    case EMAP_MSG_GAME_START:
+    {
+        /* Payload: 1 byte is_starting (0/1) */
+        if (payload_len != sizeof(EMAP_PayloadGameStart))
+        {
+            return -1;
+        }
+        out->data.game_start.is_starting = p[0]; /* EMAP_PlayType logically */
+        break;
+    }
+
+    case EMAP_MSG_GAME_END:
+    {
+        /* Payload: 1 byte has_won (0/1) */
+        if (payload_len != sizeof(EMAP_PayloadGameEnd))
+        {
+            return -1;
+        }
+        out->data.game_end.has_won = p[0]; /* EMAP_EndGameType logically */
+        break;
+    }
+
+    case EMAP_MSG_GAME_WAIT:
+    {
+        /* No payload expected */
+        if (payload_len != 0)
+        {
+            return -1;
+        }
+        /* Nothing to fill */
+        break;
+    }
+
+    case EMAP_MSG_GAME_STATE:
+    {
+        /* For now, empty; later you’ll define a proper layout */
+        if (payload_len != sizeof(EMAP_PayloadGameState))
+        {
+            /* If GameState has 0 bytes, this check is payload_len != 0 */
+            return -1;
+        }
+        break;
+    }
+
+    case EMAP_MSG_GAME_JOIN:
+    {
+        /* No payload */
+        if (payload_len != sizeof(EMAP_PayloadGameJoin))
+        {
+            return -1;
+        }
+        break;
+    }
+
+    case EMAP_MSG_ILLEGAL_PLAY:
+    {
+        /* Define when you have a payload format */
+        return -1; /* or handle properly */
+    }
+
+    default:
+        /* Unknown type */
+        return -1;
+    }
+
+    return 0;
+}

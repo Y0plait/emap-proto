@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-ssize_t send_all(int sockfd, void *buf, size_t len);
+ssize_t emap_send_all(int sockfd, const void *buf, size_t len);
 ssize_t emap_recv_all(int sock, void *buf, size_t buf_len);
 
 
