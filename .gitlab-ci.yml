@@ -51,7 +51,8 @@ test:
 # 3) Build library with `make build`
 build:
   stage: build
-  needs: ["test"]
+  # 👇 also need the image tar from build_image
+  needs: ["build_image", "test"]
   extends: .dind_job_template
   script:
     - docker run --rm -v "$CI_PROJECT_DIR":/workspace -w /workspace "$IMAGE_NAME" make build
@@ -63,7 +64,8 @@ build:
 # 4) Generate docs with `make doc`
 docs:
   stage: docs
-  needs: ["build"]
+  # 👇 also need the image tar from build_image
+  needs: ["build_image", "build"]
   extends: .dind_job_template
   script:
     - docker run --rm -v "$CI_PROJECT_DIR":/workspace -w /workspace "$IMAGE_NAME" make doc
@@ -71,6 +73,7 @@ docs:
     paths:
       - docs/html/
     expire_in: 1 week
+
 
 # 5) Publish docs via GitLab Pages
 pages:
