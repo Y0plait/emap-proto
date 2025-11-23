@@ -21,6 +21,9 @@ LIB		:= lib
 # define build directory
 BUILD_DIR	:= build
 
+# define output directory
+OUTPUT	:= output
+
 ifeq ($(OS),Windows_NT)
 SOURCEDIRS	:= $(SRC)
 INCLUDEDIRS	:= $(INCLUDE)
@@ -32,7 +35,7 @@ else
 SOURCEDIRS	:= $(shell find $(SRC) -type d)
 INCLUDEDIRS	:= $(shell find $(INCLUDE) -type d)
 FIXPATH = $1
-RM = rm -f
+RM = rm -rf
 MD	:= mkdir -p
 AR	:= ar
 endif
@@ -43,7 +46,7 @@ STATIC_LIB	:= $(BUILD_DIR)/lib$(LIBNAME).a
 
 # Test executable
 TEST_MAIN	:= emap_tests
-TEST_OUTPUT	:= $(BUILD_DIR)/$(TEST_MAIN)
+TEST_OUTPUT	:= $(OUTPUT)/$(TEST_MAIN)
 TEST_SOURCES	:= tests/test_emap.c $(SRC)/emap_high_level.c $(SRC)/emap_low_level.c
 
 # define any directories containing header files other than /usr/include
@@ -67,10 +70,13 @@ DEPS		:= $(OBJECTS:.o=.d)
 build: $(STATIC_LIB)
 	@echo "Build complete: $(STATIC_LIB)"
 
-$(BUILD_DIR):
+build-dir:
 	$(MD) $(BUILD_DIR)
 
-$(STATIC_LIB): $(BUILD_DIR) $(OBJECTS)
+$(OUTPUT):
+	$(MD) $(OUTPUT)
+
+$(STATIC_LIB): build-dir $(OBJECTS)
 	$(AR) rcs $(STATIC_LIB) $(OBJECTS)
 	@echo "Static library created: $(STATIC_LIB)"
 
@@ -86,22 +92,22 @@ $(BUILD_DIR)/%.o: $(SRC)/%.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -MMD $< -o $@
 
-test: $(BUILD_DIR) $(TEST_OUTPUT)
+test: $(OUTPUT) $(TEST_OUTPUT)
 	./$(TEST_OUTPUT)
 	@echo "Test suite completed"
 
 $(TEST_OUTPUT): $(TEST_SOURCES)
+	@mkdir -p $(OUTPUT)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST_OUTPUT) $(TEST_SOURCES)
 
 .PHONY: clean
 clean:
-	$(RM) $(call FIXPATH,$(STATIC_LIB))
-	$(RM) $(call FIXPATH,$(OBJECTS))
-	$(RM) $(call FIXPATH,$(DEPS))
+	$(RM) $(call FIXPATH,$(BUILD_DIR))/*
+	$(RM) $(call FIXPATH,$(OUTPUT))/*
 	@echo "Cleanup complete!"
 
 doc:
 	doxygen Doxyfile
 	@echo "Documentation generated in docs/html/index.html"
 
-.PHONY: build clean doc test
+.PHONY: build build-dir clean doc test
