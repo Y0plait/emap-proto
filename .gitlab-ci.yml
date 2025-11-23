@@ -1,38 +1,68 @@
+# ---
+
+# stages:
+#   - build
+#   - docs
+#   - deploy
+
+# build-job:
+#   stage: build
+#   image: xarnia/alpine-doxygen
+#   script:
+#     - make
+#   artifacts:
+#     paths:
+#       - output/
+#     expire_in: 1 week
+  
+# docs-job:
+#   stage: docs
+#   image: xarnia/alpine-doxygen
+#   script:
+#     - make documentation
+#   artifacts:
+#     paths:
+#       - docs/html
+#     expire_in: 1 week
+
+# pages:
+#   stage: deploy
+#   script:
+#     - mkdir public
+#     - cp -r docs/html/* public/
+#   artifacts:
+#     paths:
+#       - public
+#   only:
+#     - main
 ---
 
 stages:
   - build
-  - docs
-  - deploy
+  - test
 
-build-job:
+services:
+  - docker:dind
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+before_script:
+  - docker info
+
+build:
   stage: build
-  image: xarnia/alpine-doxygen
+  image: docker:latest
   script:
-    - make
-  artifacts:
-    paths:
-      - output/
-    expire_in: 1 week
-  
-docs-job:
-  stage: docs
-  image: xarnia/alpine-doxygen
-  script:
-    - make documentation
-  artifacts:
-    paths:
-      - docs/html
-    expire_in: 1 week
+    - docker build -t emap-image-dind .
+    - docker run emap-image-dind echo "Build complete"
 
-pages:
-  stage: deploy
+test:
+  stage: test
+  image: docker:latest
   script:
-    - mkdir public
-    - cp -r docs/html/* public/
-  artifacts:
-    paths:
-      - public
-  only:
-    - main
-  
+    - docker run --detach --name testing-container emap-image-dind
+    - docker exec testing-container "make test"
+    - docker stop testing-container
+    - docker rm testing-container
