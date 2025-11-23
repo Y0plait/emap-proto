@@ -41,6 +41,11 @@ endif
 LIBNAME		:= emap
 STATIC_LIB	:= $(BUILD_DIR)/lib$(LIBNAME).a
 
+# Test executable
+TEST_MAIN	:= emap_tests
+TEST_OUTPUT	:= $(BUILD_DIR)/$(TEST_MAIN)
+TEST_SOURCES	:= tests/test_emap.c $(SRC)/emap_high_level.c $(SRC)/emap_low_level.c
+
 # define any directories containing header files other than /usr/include
 INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%))
 
@@ -81,6 +86,13 @@ $(BUILD_DIR)/%.o: $(SRC)/%.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -MMD $< -o $@
 
+test: $(BUILD_DIR) $(TEST_OUTPUT)
+	./$(TEST_OUTPUT)
+	@echo "Test suite completed"
+
+$(TEST_OUTPUT): $(TEST_SOURCES)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST_OUTPUT) $(TEST_SOURCES)
+
 .PHONY: clean
 clean:
 	$(RM) $(call FIXPATH,$(STATIC_LIB))
@@ -92,4 +104,4 @@ doc:
 	doxygen Doxyfile
 	@echo "Documentation generated in docs/html/index.html"
 
-.PHONY: build clean doc
+.PHONY: build clean doc test
