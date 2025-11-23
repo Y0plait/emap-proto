@@ -1,4 +1,7 @@
 # Source : https://stackoverflow.com/questions/846639/git-ignore-file-for-c-projects & https://github.com/github/gitignore/blob/main/C.gitignore
+# Apple things...
+**/.DS_Store
+
 # Prerequisites
 *.d
 

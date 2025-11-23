@@ -6,8 +6,8 @@
  * @brief High-level helpers responsible for framing and decoding EMAP packets.
  */
 
-#include "../include/types.h"
-#include "../include/emap_message.h"
+#include "types.h"
+#include "emap_message.h"
 
 /**
  * @brief Serialize and send an EMAP packet over a stream socket.
@@ -37,6 +37,9 @@ int emap_send_packet(int sock, uint8_t msg_type, const void *payload, uint16_t p
  * @param payload_out Output pointer filled with a heap-allocated buffer or set to @c NULL when empty.
  * @param payload_len_out Output pointer receiving the payload length in bytes.
  * @return 0 on success, -1 on validation or transport error.
+ * 
+ * @post @ref emap_recv_packet must be called after on payload_out to get a usable EMAP struct.
+ * 
  */
 int emap_recv_packet(int sock, uint8_t *type_out, void **payload_out, uint16_t *payload_len_out);
 

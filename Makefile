@@ -9,14 +9,6 @@ CC = gcc
 # define any compile-time flags
 CFLAGS	:= -Wall -Wextra -g
 
-# define library paths in addition to /usr/lib
-#   if I wanted to include libraries not in /usr/lib I'd specify
-#   their path using -Lpath, something like:
-LFLAGS =
-
-# define output directory
-OUTPUT	:= output
-
 # define source directory
 SRC		:= src
 
@@ -26,39 +18,37 @@ INCLUDE	:= include
 # define lib directory
 LIB		:= lib
 
+# define build directory
+BUILD_DIR	:= build
+
 ifeq ($(OS),Windows_NT)
-MAIN	:= emap.exe
 SOURCEDIRS	:= $(SRC)
 INCLUDEDIRS	:= $(INCLUDE)
-LIBDIRS		:= $(LIB)
 FIXPATH = $(subst /,\,$1)
 RM			:= del /q /f
 MD	:= mkdir
+AR	:= ar
 else
-MAIN	:= emap
 SOURCEDIRS	:= $(shell find $(SRC) -type d)
 INCLUDEDIRS	:= $(shell find $(INCLUDE) -type d)
-LIBDIRS		:= $(shell find $(LIB) -type d)
 FIXPATH = $1
 RM = rm -f
 MD	:= mkdir -p
+AR	:= ar
 endif
 
-TEST_MAIN       := emap_tests
-TEST_OUTPUT     := $(call FIXPATH,$(OUTPUT)/$(TEST_MAIN))
-TEST_SOURCES    := tests/test_emap.c $(SRC)/emap_high_level.c $(SRC)/emap_low_level.c
+# Library name
+LIBNAME		:= emap
+STATIC_LIB	:= $(BUILD_DIR)/lib$(LIBNAME).a
 
 # define any directories containing header files other than /usr/include
 INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%))
-
-# define the C libs
-LIBS		:= $(patsubst %,-L%, $(LIBDIRS:%/=%))
 
 # define the C source files
 SOURCES		:= $(wildcard $(patsubst %,%/*.c, $(SOURCEDIRS)))
 
 # define the C object files 
-OBJECTS		:= $(SOURCES:.c=.o)
+OBJECTS		:= $(patsubst $(SRC)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
 
 # define the dependency output files
 DEPS		:= $(OBJECTS:.o=.d)
@@ -69,23 +59,15 @@ DEPS		:= $(OBJECTS:.o=.d)
 # deleting dependencies appended to the file from 'make depend'
 #
 
-OUTPUTMAIN	:= $(call FIXPATH,$(OUTPUT)/$(MAIN))
+build: $(STATIC_LIB)
+	@echo "Build complete: $(STATIC_LIB)"
 
-all: $(OUTPUT) $(MAIN)
-	@echo Executing 'all' complete!
+$(BUILD_DIR):
+	$(MD) $(BUILD_DIR)
 
-$(OUTPUT):
-	$(MD) $(OUTPUT)
-
-$(MAIN): $(OBJECTS) 
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(OUTPUTMAIN) $(OBJECTS) $(LFLAGS) $(LIBS)
-
-$(TEST_OUTPUT): $(TEST_SOURCES)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST_OUTPUT) $(TEST_SOURCES) $(LFLAGS) $(LIBS)
-
-test: $(OUTPUT) $(TEST_OUTPUT)
-	./$(TEST_OUTPUT)
-	@echo "Test suite completed"
+$(STATIC_LIB): $(BUILD_DIR) $(OBJECTS)
+	$(AR) rcs $(STATIC_LIB) $(OBJECTS)
+	@echo "Static library created: $(STATIC_LIB)"
 
 # include all .d files
 -include $(DEPS)
@@ -95,21 +77,19 @@ test: $(OUTPUT) $(TEST_OUTPUT)
 # the rule(a .c file) and $@: the name of the target of the rule (a .o file) 
 # -MMD generates dependency output files same name as the .o file
 # (see the gnu make manual section about automatic variables)
-.c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c -MMD $<  -o $@
+$(BUILD_DIR)/%.o: $(SRC)/%.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(INCLUDES) -c -MMD $< -o $@
 
 .PHONY: clean
 clean:
-	$(RM) $(OUTPUTMAIN)
-	$(RM) $(TEST_OUTPUT)
+	$(RM) $(call FIXPATH,$(STATIC_LIB))
 	$(RM) $(call FIXPATH,$(OBJECTS))
 	$(RM) $(call FIXPATH,$(DEPS))
-	@echo Cleanup complete!
+	@echo "Cleanup complete!"
 
-documentation:
+doc:
 	doxygen Doxyfile
 	@echo "Documentation generated in docs/html/index.html"
 
-run: all
-	./$(OUTPUTMAIN)
-	@echo Executing 'run: all' complete!
+.PHONY: build clean doc

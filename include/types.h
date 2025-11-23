@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include "../include/constants.h"
+#include "constants.h"
 
 /**
  * @brief Player turn state used inside @ref EMAP_PayloadGameStart and @ref EMAP_PayloadPlay.
