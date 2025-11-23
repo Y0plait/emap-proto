@@ -1,10 +1,10 @@
 # ---
-
+#
 # stages:
 #   - build
 #   - docs
 #   - deploy
-
+#
 # build-job:
 #   stage: build
 #   image: xarnia/alpine-doxygen
@@ -14,7 +14,7 @@
 #     paths:
 #       - output/
 #     expire_in: 1 week
-  
+#
 # docs-job:
 #   stage: docs
 #   image: xarnia/alpine-doxygen
@@ -24,7 +24,7 @@
 #     paths:
 #       - docs/html
 #     expire_in: 1 week
-
+#
 # pages:
 #   stage: deploy
 #   script:
@@ -48,8 +48,8 @@ variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
 
-before_script:
-  - docker info
+# before_script:
+#   - docker info
 
 build:
   stage: build
