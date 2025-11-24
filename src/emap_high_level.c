@@ -252,8 +252,13 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
 
     case EMAP_MSG_ILLEGAL_PLAY:
     {
+
         /* Define when you have a payload format */
-        return -1; /* or handle properly */
+        if (payload_len != sizeof(EMAP_PayloadIllegalPlay))
+        {
+            return -1; /* or handle properly */
+        }
+        break;
     }
 
     default:

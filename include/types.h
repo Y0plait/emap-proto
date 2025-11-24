@@ -72,6 +72,8 @@ typedef struct {
     uint8_t payload; /**< Single-byte payload. */
 } EMAP_GeneralPacket;
 
+
+
 /**
  * @brief Payload for @ref EMAP_MSG_GENERAL_ACK.
  */
@@ -145,6 +147,13 @@ typedef struct {
     uint16_t money;                               /**< Currency owned (network order). */
     uint8_t possessed_skins[TOTAL_SKIN_AMOUNT];   /**< Owned skin flags. */
 } EMAP_PayloadPlayerInfo;
+
+/**
+ * @brief Payload for @ref EMAP_MSG_ILLEGAL_PLAY
+ */
+typedef struct {
+    /* Intentionally empty; */
+} EMAP_PayloadIllegalPlay;
 
 #pragma pack(pop)
 
