@@ -9,6 +9,14 @@ CC = gcc
 # define any compile-time flags
 CFLAGS	:= -Wall -Wextra -g
 
+# define library paths in addition to /usr/lib
+#   if I wanted to include libraries not in /usr/lib I'd specify
+#   their path using -Lpath, something like:
+LFLAGS =
+
+# define output directory
+OUTPUT	:= output
+
 # define source directory
 SRC		:= src
 
@@ -21,45 +29,56 @@ LIB		:= lib
 # define build directory
 BUILD_DIR	:= build
 
-# define output directory
-OUTPUT	:= output
+# Submodules to compile
+
+# --- EMAP library ---
+EMAP_DIR = $(LIB)/emap-lib
+EMAP_BUILD_DIR = $(EMAP_DIR)/build
+EMAP_LIB = $(EMAP_BUILD_DIR)/libemap.a
+
+# Build wrappers.c locally to ensure helper symbols are available even if
+# the submodule archive omits them
+EMAP_WRAPPERS_SRC := $(EMAP_DIR)/src/wrappers.c
+EMAP_WRAPPERS_OBJ := $(BUILD_DIR)/emap_wrappers.o
+
+# --- All built libs under lib/ ---
+LIBS_TO_BUILD = $(EMAP_LIB)
 
 ifeq ($(OS),Windows_NT)
+MAIN	:= noometernal-server.exe
 SOURCEDIRS	:= $(SRC)
 INCLUDEDIRS	:= $(INCLUDE)
+LIBDIRS		:= $(LIB)
 FIXPATH = $(subst /,\,$1)
 RM			:= del /q /f
 MD	:= mkdir
-AR	:= ar
 else
+MAIN	:= noometernal-server
 SOURCEDIRS	:= $(shell find $(SRC) -type d)
 INCLUDEDIRS	:= $(shell find $(INCLUDE) -type d)
+LIBDIRS		:= $(shell find $(LIB) -type d)
 FIXPATH = $1
-RM = rm -rf
+RM = rm -f
 MD	:= mkdir -p
-AR	:= ar
 endif
 
-# Library name
-LIBNAME		:= emap
-STATIC_LIB	:= $(BUILD_DIR)/lib$(LIBNAME).a
-
-# Test executable
-TEST_MAIN	:= emap_tests
-TEST_OUTPUT	:= $(OUTPUT)/$(TEST_MAIN)
-TEST_SOURCES	:= tests/test_emap.c $(SRC)/emap_high_level.c $(SRC)/emap_low_level.c
-
 # define any directories containing header files other than /usr/include
-INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%))
+INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%)) -I$(EMAP_DIR)/include
+
+# define the C lib search paths
+LIBPATHS	:= $(patsubst %,-L%, $(LIBDIRS:%/=%)) -L$(EMAP_BUILD_DIR)
 
 # define the C source files
 SOURCES		:= $(wildcard $(patsubst %,%/*.c, $(SOURCEDIRS)))
 
 # define the C object files 
-OBJECTS		:= $(patsubst $(SRC)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
+OBJECTS		:= $(patsubst $(SRC)/%.c,$(BUILD_DIR)/%.o,$(SOURCES)) $(EMAP_WRAPPERS_OBJ)
 
 # define the dependency output files
 DEPS		:= $(OBJECTS:.o=.d)
+
+# define target executable
+TARGET		:= $(OUTPUT)/$(MAIN)
 
 #
 # The following part of the makefile is generic; it can be used to 
@@ -67,47 +86,48 @@ DEPS		:= $(OBJECTS:.o=.d)
 # deleting dependencies appended to the file from 'make depend'
 #
 
-build: $(STATIC_LIB)
-	@echo "Build complete: $(STATIC_LIB)"
+# ---------- Default target ----------
+build: $(TARGET)
 
-build-dir:
-	$(MD) $(BUILD_DIR)
+# ---------- Build all libs in lib/ ----------
+build-lib: $(LIBS_TO_BUILD)
 
-$(OUTPUT):
-	$(MD) $(OUTPUT)
+# EMAP library via its own Makefile
+$(EMAP_LIB):
+	$(MAKE) -C $(EMAP_DIR)
 
-$(STATIC_LIB): build-dir $(OBJECTS)
-	$(AR) rcs $(STATIC_LIB) $(OBJECTS)
-	@echo "Static library created: $(STATIC_LIB)"
+# ---------- Build project ----------
+$(TARGET): build-lib $(OBJECTS)
+	@mkdir -p $(OUTPUT)
+	$(CC) $(CFLAGS) $(INCLUDES) $(OBJECTS) $(LIBPATHS) -lemap -lpthread -o $(TARGET)
+	@echo "Build complete: $(TARGET)"
 
-# include all .d files
--include $(DEPS)
-
-# this is a suffix replacement rule for building .o's and .d's from .c's
-# it uses automatic variables $<: the name of the prerequisite of
-# the rule(a .c file) and $@: the name of the target of the rule (a .o file) 
-# -MMD generates dependency output files same name as the .o file
-# (see the gnu make manual section about automatic variables)
+# ---------- Compile .c → .o in build/ ----------
 $(BUILD_DIR)/%.o: $(SRC)/%.c
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -c -MMD $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-test: $(OUTPUT) $(TEST_OUTPUT)
-	./$(TEST_OUTPUT)
-	@echo "Test suite completed"
+# Explicit build of EMAP wrappers from submodule sources
+$(EMAP_WRAPPERS_OBJ): $(EMAP_WRAPPERS_SRC)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -I$(EMAP_DIR)/include -c $< -o $@
 
-$(TEST_OUTPUT): $(TEST_SOURCES)
-	@mkdir -p $(OUTPUT)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST_OUTPUT) $(TEST_SOURCES)
-
-.PHONY: clean
+# ---------- CLEAN ----------
 clean:
-	$(RM) $(call FIXPATH,$(BUILD_DIR))/*
-	$(RM) $(call FIXPATH,$(OUTPUT))/*
-	@echo "Cleanup complete!"
+	rm -rf $(BUILD_DIR) $(OUTPUT)
 
+clean-lib:
+	$(MAKE) -C $(EMAP_DIR) clean || true
+
+clean-all: clean clean-lib
+
+# ---------- RUN ----------
+run: build
+	./$(TARGET)
+
+# ---------- DOCUMENTATION ----------
 doc:
 	doxygen Doxyfile
 	@echo "Documentation generated in docs/html/index.html"
 
-.PHONY: build build-dir clean doc test
+.PHONY: build build-lib clean clean-lib clean-all run doc
