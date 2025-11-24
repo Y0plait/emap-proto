@@ -263,3 +263,167 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
 
     return 0;
 }
+
+int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message *message, void **out, uint16_t *out_len)
+{
+    if (!message || !out || !out_len)
+    {
+        return -1;
+    }
+
+    uint8_t *buffer = NULL;
+    uint16_t buffer_len = 0;
+
+    /* Match message type to encode the payload struct */
+    switch (msg_type)
+    {
+    case EMAP_MSG_GENERAL_ACK:
+    {
+        /* Payload: 1 byte -> ack_type (0/1) */
+        buffer_len = sizeof(EMAP_PayloadGeneralACK);
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+        buffer[0] = message->data.general_ack.ack_type;
+        break;
+    }
+
+    case EMAP_MSG_MOVE:
+    {
+        /* Payload: 2 bytes: coin_index, coin_pos */
+        buffer_len = sizeof(EMAP_PayloadMove);
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+        buffer[0] = message->data.move.coin_index;
+        buffer[1] = message->data.move.coin_pos;
+        break;
+    }
+
+    case EMAP_MSG_PLAY:
+    {
+        /* Payload: 1 byte: EMAP_PlayType (0/1) */
+        buffer_len = sizeof(EMAP_PayloadPlay);
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+        buffer[0] = message->data.play.play_type;
+        break;
+    }
+
+    case EMAP_MSG_PLAYER_INFO:
+    {
+        /* On wire:
+         *  byte 0: level (uint8_t)
+         *  byte 1-2: progression (uint16_t, network order)
+         *  byte 3-4: money       (uint16_t, network order)
+         *  byte 5..(5+TOTAL_SKIN_AMOUNT-1): possessed_skins[]
+         */
+        buffer_len = 1 + 2 + 2 + TOTAL_SKIN_AMOUNT;
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+
+        buffer[0] = message->data.player_info.level;
+
+        uint16_t progression_net = htons(message->data.player_info.progression);
+        uint16_t money_net = htons(message->data.player_info.money);
+
+        memcpy(&buffer[1], &progression_net, sizeof(progression_net));
+        memcpy(&buffer[3], &money_net, sizeof(money_net));
+
+        memcpy(&buffer[5],
+               message->data.player_info.possessed_skins,
+               TOTAL_SKIN_AMOUNT);
+
+        break;
+    }
+
+    case EMAP_MSG_CONNECT:
+    {
+        /* Payload: username is fixed-size MAX_PLAYER_USERNAME_SIZE bytes */
+        buffer_len = MAX_PLAYER_USERNAME_SIZE;
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+        memcpy(buffer, message->data.connect.username, MAX_PLAYER_USERNAME_SIZE);
+        break;
+    }
+
+    case EMAP_MSG_GAME_START:
+    {
+        /* Payload: 1 byte is_starting (0/1) */
+        buffer_len = sizeof(EMAP_PayloadGameStart);
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+        buffer[0] = message->data.game_start.is_starting;
+        break;
+    }
+
+    case EMAP_MSG_GAME_END:
+    {
+        /* Payload: 1 byte has_won (0/1) */
+        buffer_len = sizeof(EMAP_PayloadGameEnd);
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+        buffer[0] = message->data.game_end.has_won;
+        break;
+    }
+
+    case EMAP_MSG_GAME_WAIT:
+    {
+        /* No payload */
+        buffer_len = 0;
+        buffer = NULL;
+        break;
+    }
+
+    case EMAP_MSG_GAME_STATE:
+    {
+        /* No payload expected */
+        buffer_len = 0;
+        buffer = NULL;
+        break;
+    }
+
+    case EMAP_MSG_GAME_JOIN:
+    {
+        /* No payload */
+        buffer_len = 0;
+        buffer = NULL;
+        break;
+    }
+
+    case EMAP_MSG_ILLEGAL_PLAY:
+    {
+        /* No payload for now */
+        buffer_len = 0;
+        buffer = NULL;
+        break;
+    }
+
+    default:
+        /* Unknown type */
+        return -1;
+    }
+
+    *out = buffer;
+    *out_len = buffer_len;
+    return 0;
+}

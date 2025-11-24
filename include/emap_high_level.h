@@ -58,4 +58,42 @@ int emap_recv_packet(int sock, uint8_t *type_out, void **payload_out, uint16_t *
  */
 int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_len, EMAP_Message *out);
 
+
+/**
+ * @brief Encode an EMAP message into a contiguous binary buffer.
+ *
+ * This function serializes an EMAP_Message according to the EMAP protocol
+ * and returns a newly allocated buffer containing the encoded representation.
+ * The buffer is suitable for transmission or storage and its length is
+ * provided in bytes.
+ *
+ * @param[in] msg_type  Type of the message; determines the encoding rules
+ *                      applied to the @p message parameter.
+ * @param[in] message   Pointer to the message structure to encode. Must be
+ *                      a valid, fully-initialized EMAP_Message appropriate
+ *                      for @p msg_type. The function does not take ownership
+ *                      of this pointer.
+ * @param[out] out      Pointer to a variable that will receive the address
+ *                      of the newly allocated encoded buffer on success.
+ *                      On success, *out points to heap memory that the caller
+ *                      is responsible for freeing. The allocation failure or
+ *                      an encoding error leaves *out unchanged (caller must
+ *                      check the return value before using or freeing it).
+ * @param[out] out_len  Pointer to a uint16_t that will be set to the length
+ *                      in bytes of the encoded buffer on success. Must not be NULL.
+ *
+ * @pre  @p out and @p out_len must be non-NULL. @p message must be non-NULL
+ *       and valid for the specified @p msg_type.
+ * @post On success, *out points to an allocated buffer of length *out_len
+ *       containing the encoded message. The caller is responsible for freeing
+ *       this buffer.
+ *
+ * @return 0 on success; non-zero error code on failure.
+ *         Error codes indicate invalid parameters, allocation failures, or
+ *         encoding errors. The exact error values are implementation-defined;
+ *         callers should check for non-zero returns and handle errors
+ *         appropriately.
+ */
+int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message *message, void **out, uint16_t *out_len);
+
 #endif
