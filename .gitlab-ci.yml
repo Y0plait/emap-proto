@@ -1,91 +1,33 @@
+---
+
 stages:
   - build_image
   - test
   - build
-  - docs
-  - pages
+  - test
+
+services:
+  - docker:dind
 
 variables:
-  DOCKER_TLS_CERTDIR: "/certs"
-  DOCKER_HOST: "tcp://docker:2376"
-  DOCKER_DRIVER: overlay2
-  IMAGE_NAME: "$CI_PROJECT_NAME-ci-image"
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
 
-# Base template for jobs that use Docker-in-Docker
-.dind_job_template:
-  image: docker:27
-  services:
-    - name: docker:27-dind
-  before_script:
-    - apk add --no-cache bash
-    - docker load -i ci-image.tar
+before_script:
+  - docker info
 
-# 1) Build the Alpine image from Dockerfile
-build_image:
-  stage: build_image
-  image: docker:27
-  services:
-    - name: docker:27-dind
-  script:
-    - apk add --no-cache bash
-    - docker info
-    - docker build -t "$IMAGE_NAME" .
-    - docker save "$IMAGE_NAME" -o ci-image.tar
-  artifacts:
-    paths:
-      - ci-image.tar
-    expire_in: 1 week
-
-# 2) Run tests with `make test`
-test:
-  stage: test
-  needs: ["build_image"]
-  extends: .dind_job_template
-  script:
-    - docker run --rm -v "$CI_PROJECT_DIR":/workspace -w /workspace "$IMAGE_NAME" make test
-  artifacts:
-    paths:
-      - build/
-    when: always
-
-# 3) Build library with `make build`
 build:
   stage: build
-  # 👇 also need the image tar from build_image
-  needs: ["build_image", "test"]
-  extends: .dind_job_template
+  image: docker:latest
   script:
-    - docker run --rm -v "$CI_PROJECT_DIR":/workspace -w /workspace "$IMAGE_NAME" make build
-  artifacts:
-    paths:
-      - build/
-    when: always
+    - docker build -t emap-image-dind .
+    - docker run emap-image-dind echo "Build complete"
 
-# 4) Generate docs with `make doc`
-docs:
-  stage: docs
-  # 👇 also need the image tar from build_image
-  needs: ["build_image", "build"]
-  extends: .dind_job_template
+test:
+  stage: test
+  image: docker:latest
   script:
-    - docker run --rm -v "$CI_PROJECT_DIR":/workspace -w /workspace "$IMAGE_NAME" make doc
-  artifacts:
-    paths:
-      - docs/html/
-    expire_in: 1 week
-
-
-# 5) Publish docs via GitLab Pages
-pages:
-  stage: pages
-  needs: ["docs"]
-  image: alpine:3.20
-  script:
-    - apk add --no-cache bash
-    - mkdir -p public
-    - cp -r docs/html/* public/
-  artifacts:
-    paths:
-      - public/
-  only:
-    - main    # or master / another branch
+    - docker run --detach --name testing-container emap-image-dind
+    - docker exec testing-container "make test"
+    - docker stop testing-container
+    - docker rm testing-container
