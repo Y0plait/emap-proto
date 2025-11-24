@@ -23,5 +23,6 @@
 
 #pragma once
 #include "emap_high_level.h"
+#include "wrappers.h"
 
 #endif
