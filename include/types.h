@@ -48,8 +48,17 @@ typedef enum {
     EMAP_MSG_MOVE = 0x08,        /**< Player move command. */
     EMAP_MSG_PLAY = 0x09,        /**< Turn notification. */
     EMAP_MSG_ILLEGAL_PLAY = 0x0A,/**< Invalid move notification. */
-    EMAP_MSG_PLAYER_INFO = 0x0B  /**< Player profile synchronization. */
+    EMAP_MSG_PLAYER_INFO = 0x0B, /**< Player profile synchronization. */
+    EMAP_MSG_SHOP_ACTION = 0x0C  /**< Shop purchase/equip action. */
 } EMAP_MessageType;
+
+/**
+ * @brief Shop action semantic encoded in @ref EMAP_PayloadShopAction.
+ */
+typedef enum {
+    EMAP_SHOP_ACTION_PURCHASE = 0, /**< Client wants to purchase a skin. */
+    EMAP_SHOP_ACTION_EQUIP = 1     /**< Client wants to equip a skin already owned. */
+} EMAP_ShopActionType;
 
 /**
  * @brief Packet header prepended to every EMAP frame.
@@ -145,8 +154,17 @@ typedef struct {
     uint8_t level;                                /**< Player level [0,255]. */
     uint16_t progression;                         /**< Progress toward next level (network order). */
     uint16_t money;                               /**< Currency owned (network order). */
+    uint8_t selected_skin;                        /**< Currently equipped skin id. */
     uint8_t possessed_skins[TOTAL_SKIN_AMOUNT];   /**< Owned skin flags. */
 } EMAP_PayloadPlayerInfo;
+
+/**
+ * @brief Payload for @ref EMAP_MSG_SHOP_ACTION.
+ */
+typedef struct {
+    uint8_t action;      /**< Value from @ref EMAP_ShopActionType. */
+    uint8_t skin_index;  /**< Target skin identifier. */
+} EMAP_PayloadShopAction;
 
 /**
  * @brief Payload for @ref EMAP_MSG_ILLEGAL_PLAY

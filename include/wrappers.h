@@ -52,13 +52,14 @@ int emap_helper_send_connect(int fd, const char *username);
  * @param level         Player level.
  * @param progression   Player progression value.
  * @param money         Player money amount.
+ * @param selected_skin Currently equipped skin index.
  * @param skins         Pointer to an array of skin identifiers. If skins_len is 0,
  *                      this pointer may be NULL.
  * @param skins_len     Number of bytes (or elements) in the skins array.
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, uint16_t money, const uint8_t *skins, uint16_t skins_len);
+int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, uint16_t money, uint8_t selected_skin, const uint8_t *skins, uint16_t skins_len);
 
 /**
  * @brief Notify the peer that the client is joining a game.
@@ -160,3 +161,14 @@ int emap_helper_send_game_state(int fd, const void *payload, uint16_t len); // s
  * @return Non-negative on success, negative on error.
  */
 int emap_helper_send_game_end(int fd, uint8_t result);               // EMAP_END_GAME_WIN / LOSE
+
+/**
+ * @brief Send a shop action requested by the client.
+ *
+ * @param fd          File descriptor to send on.
+ * @param action      Value from @ref EMAP_ShopActionType.
+ * @param skin_index  Target skin.
+ *
+ * @return Non-negative on success, negative on error.
+ */
+int emap_helper_send_shop_action(int fd, uint8_t action, uint8_t skin_index);

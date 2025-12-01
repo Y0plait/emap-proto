@@ -146,16 +146,18 @@ static int test_decode_player_info_endianness(void)
     const uint8_t level = 42;
     const uint16_t progression = 4321;
     const uint16_t money = 999;
+    const uint8_t selected_skin = 7;
 
-    uint8_t payload[1 + 2 + 2 + TOTAL_SKIN_AMOUNT];
+    uint8_t payload[1 + 2 + 2 + 1 + TOTAL_SKIN_AMOUNT];
     payload[0] = level;
     payload[1] = (uint8_t)(progression >> 8);
     payload[2] = (uint8_t)(progression & 0xFF);
     payload[3] = (uint8_t)(money >> 8);
     payload[4] = (uint8_t)(money & 0xFF);
+    payload[5] = selected_skin;
     for (size_t i = 0; i < TOTAL_SKIN_AMOUNT; ++i)
     {
-        payload[5 + i] = (uint8_t)i;
+        payload[6 + i] = (uint8_t)i;
     }
 
     EMAP_Message message;
@@ -165,7 +167,8 @@ static int test_decode_player_info_endianness(void)
     EXPECT_EQ(level, message.data.player_info.level);
     EXPECT_EQ(progression, message.data.player_info.progression);
     EXPECT_EQ(money, message.data.player_info.money);
-    EXPECT_MEMEQ(&payload[5], message.data.player_info.possessed_skins, TOTAL_SKIN_AMOUNT);
+    EXPECT_EQ(selected_skin, message.data.player_info.selected_skin);
+    EXPECT_MEMEQ(&payload[6], message.data.player_info.possessed_skins, TOTAL_SKIN_AMOUNT);
 
     return 0;
 }
@@ -281,7 +284,8 @@ static int test_encode_player_info_endianness(void)
         .type = EMAP_MSG_PLAYER_INFO,
         .data.player_info.level = 42,
         .data.player_info.progression = 4321,
-        .data.player_info.money = 999};
+        .data.player_info.money = 999,
+        .data.player_info.selected_skin = 3};
 
     for (size_t i = 0; i < TOTAL_SKIN_AMOUNT; ++i)
     {
@@ -293,7 +297,7 @@ static int test_encode_player_info_endianness(void)
     EXPECT_EQ(0, emap_encode_msg(EMAP_MSG_PLAYER_INFO, &message, &out, &out_len));
 
     EXPECT_TRUE(out != NULL);
-    EXPECT_EQ(1 + 2 + 2 + TOTAL_SKIN_AMOUNT, out_len);
+    EXPECT_EQ(1 + 2 + 2 + 1 + TOTAL_SKIN_AMOUNT, out_len);
 
     uint8_t *buffer = (uint8_t *)out;
     EXPECT_EQ(42, buffer[0]);
@@ -305,7 +309,8 @@ static int test_encode_player_info_endianness(void)
 
     EXPECT_EQ(4321, ntohs(progression_net));
     EXPECT_EQ(999, ntohs(money_net));
-    EXPECT_MEMEQ(&buffer[5], message.data.player_info.possessed_skins, TOTAL_SKIN_AMOUNT);
+    EXPECT_EQ(3, buffer[5]);
+    EXPECT_MEMEQ(&buffer[6], message.data.player_info.possessed_skins, TOTAL_SKIN_AMOUNT);
 
     free(out);
     return 0;
@@ -408,6 +413,27 @@ static int test_encode_game_join(void)
     return 0;
 }
 
+static int test_encode_shop_action(void)
+{
+    EMAP_Message message = {
+        .type = EMAP_MSG_SHOP_ACTION,
+        .data.shop_action.action = EMAP_SHOP_ACTION_EQUIP,
+        .data.shop_action.skin_index = 4};
+
+    void *out = NULL;
+    uint16_t out_len = 0;
+    EXPECT_EQ(0, emap_encode_msg(EMAP_MSG_SHOP_ACTION, &message, &out, &out_len));
+
+    EXPECT_TRUE(out != NULL);
+    EXPECT_EQ((int)sizeof(EMAP_PayloadShopAction), out_len);
+    uint8_t *buffer = (uint8_t *)out;
+    EXPECT_EQ(EMAP_SHOP_ACTION_EQUIP, buffer[0]);
+    EXPECT_EQ(4, buffer[1]);
+
+    free(out);
+    return 0;
+}
+
 static int test_encode_rejects_null_message(void)
 {
     void *out = NULL;
@@ -465,7 +491,8 @@ static int test_encode_decode_roundtrip_player_info(void)
         .type = EMAP_MSG_PLAYER_INFO,
         .data.player_info.level = 15,
         .data.player_info.progression = 5000,
-        .data.player_info.money = 2500};
+        .data.player_info.money = 2500,
+        .data.player_info.selected_skin = 4};
 
     for (size_t i = 0; i < TOTAL_SKIN_AMOUNT; ++i)
     {
@@ -482,6 +509,7 @@ static int test_encode_decode_roundtrip_player_info(void)
     EXPECT_EQ(original.data.player_info.level, decoded.data.player_info.level);
     EXPECT_EQ(original.data.player_info.progression, decoded.data.player_info.progression);
     EXPECT_EQ(original.data.player_info.money, decoded.data.player_info.money);
+    EXPECT_EQ(original.data.player_info.selected_skin, decoded.data.player_info.selected_skin);
     EXPECT_MEMEQ(original.data.player_info.possessed_skins,
                  decoded.data.player_info.possessed_skins,
                  TOTAL_SKIN_AMOUNT);
@@ -620,6 +648,29 @@ static int test_decode_game_join_message(void)
     return 0;
 }
 
+static int test_decode_shop_action_message(void)
+{
+    const uint8_t payload[] = {EMAP_SHOP_ACTION_PURCHASE, 5};
+    EMAP_Message message;
+    EXPECT_EQ(0, emap_decode_msg(EMAP_MSG_SHOP_ACTION, payload, sizeof(payload), &message));
+
+    EXPECT_EQ(EMAP_MSG_SHOP_ACTION, message.type);
+    EXPECT_EQ(EMAP_SHOP_ACTION_PURCHASE, message.data.shop_action.action);
+    EXPECT_EQ(5, message.data.shop_action.skin_index);
+
+    return 0;
+}
+
+static int test_decode_shop_action_invalid_length(void)
+{
+    const uint8_t payload[] = {EMAP_SHOP_ACTION_EQUIP};
+    EMAP_Message message;
+    int rc = emap_decode_msg(EMAP_MSG_SHOP_ACTION, payload, sizeof(payload), &message);
+    EXPECT_EQ(-1, rc);
+
+    return 0;
+}
+
 static int test_decode_general_ack_invalid_length(void)
 {
     const uint8_t payload[] = {}; /* Empty, but ACK expects 1 byte */
@@ -642,16 +693,17 @@ static int test_decode_player_info_invalid_length(void)
 
 static int test_decode_player_info_correct_length(void)
 {
-    const size_t expected_len = 1 + 2 + 2 + TOTAL_SKIN_AMOUNT;
+    const size_t expected_len = 1 + 2 + 2 + 1 + TOTAL_SKIN_AMOUNT;
     uint8_t payload[expected_len];
     payload[0] = 25;                        /* level */
     payload[1] = 0x12;
     payload[2] = 0x34;                      /* progression in network byte order */
     payload[3] = 0x56;
     payload[4] = 0x78;                      /* money in network byte order */
+    payload[5] = 0x02;                      /* selected skin */
     for (size_t i = 0; i < TOTAL_SKIN_AMOUNT; ++i)
     {
-        payload[5 + i] = (uint8_t)i;
+        payload[6 + i] = (uint8_t)i;
     }
 
     EMAP_Message message;
@@ -661,7 +713,8 @@ static int test_decode_player_info_correct_length(void)
     EXPECT_EQ(25, message.data.player_info.level);
     EXPECT_EQ(0x1234, message.data.player_info.progression);
     EXPECT_EQ(0x5678, message.data.player_info.money);
-    EXPECT_MEMEQ(&payload[5], message.data.player_info.possessed_skins, TOTAL_SKIN_AMOUNT);
+    EXPECT_EQ(0x02, message.data.player_info.selected_skin);
+    EXPECT_MEMEQ(&payload[6], message.data.player_info.possessed_skins, TOTAL_SKIN_AMOUNT);
 
     return 0;
 }
@@ -735,6 +788,7 @@ int main(void)
         {"emap_encode_msg encodes game wait", test_encode_game_wait},
         {"emap_encode_msg encodes game state", test_encode_game_state},
         {"emap_encode_msg encodes game join", test_encode_game_join},
+        {"emap_encode_msg encodes shop action", test_encode_shop_action},
         {"emap_encode_msg rejects null message", test_encode_rejects_null_message},
         {"emap_encode_msg rejects null out pointer", test_encode_rejects_null_out_ptr},
         {"emap_encode_msg rejects null out_len pointer", test_encode_rejects_null_out_len_ptr},
@@ -751,6 +805,8 @@ int main(void)
         {"emap_decode_msg rejects invalid game wait", test_decode_game_wait_invalid_payload},
         {"emap_decode_msg decodes game state message", test_decode_game_state_message},
         {"emap_decode_msg decodes game join message", test_decode_game_join_message},
+        {"emap_decode_msg decodes shop action message", test_decode_shop_action_message},
+        {"emap_decode_msg rejects invalid shop action length", test_decode_shop_action_invalid_length},
         {"emap_decode_msg rejects invalid ack length", test_decode_general_ack_invalid_length},
         {"emap_decode_msg rejects invalid player info length", test_decode_player_info_invalid_length},
         {"emap_decode_msg decodes player info with correct length", test_decode_player_info_correct_length},

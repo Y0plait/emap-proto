@@ -150,12 +150,14 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
          *  byte 0: level (uint8_t)
          *  byte 1-2: progression (uint16_t, network order)
          *  byte 3-4: money       (uint16_t, network order)
-         *  byte 5..(5+TOTAL_SKIN_AMOUNT-1): possessed_skins[]
+         *  byte 5: selected_skin (uint8_t)
+         *  byte 6..(6+TOTAL_SKIN_AMOUNT-1): possessed_skins[]
          */
         const size_t expected_len =
             1   /* level */
             + 2 /* progression */
             + 2 /* money */
+            + 1 /* selected skin */
             + TOTAL_SKIN_AMOUNT;
         if (payload_len != expected_len)
         {
@@ -171,11 +173,24 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
         memcpy(&money_net, &p[3], sizeof(money_net));
         out->data.player_info.progression = ntohs(progression_net);
         out->data.player_info.money = ntohs(money_net);
+        out->data.player_info.selected_skin = p[5];
 
         memcpy(out->data.player_info.possessed_skins,
-               &p[5],
+               &p[6],
                TOTAL_SKIN_AMOUNT);
 
+        break;
+    }
+
+    case EMAP_MSG_SHOP_ACTION:
+    {
+        if (payload_len != sizeof(EMAP_PayloadShopAction))
+        {
+            return -1;
+        }
+
+        out->data.shop_action.action = p[0];
+        out->data.shop_action.skin_index = p[1];
         break;
     }
 
@@ -328,9 +343,10 @@ int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message *message, void **out
          *  byte 0: level (uint8_t)
          *  byte 1-2: progression (uint16_t, network order)
          *  byte 3-4: money       (uint16_t, network order)
-         *  byte 5..(5+TOTAL_SKIN_AMOUNT-1): possessed_skins[]
+         *  byte 5: selected_skin (uint8_t)
+         *  byte 6..(6+TOTAL_SKIN_AMOUNT-1): possessed_skins[]
          */
-        buffer_len = 1 + 2 + 2 + TOTAL_SKIN_AMOUNT;
+        buffer_len = 1 + 2 + 2 + 1 + TOTAL_SKIN_AMOUNT;
         buffer = malloc(buffer_len);
         if (!buffer)
         {
@@ -344,8 +360,9 @@ int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message *message, void **out
 
         memcpy(&buffer[1], &progression_net, sizeof(progression_net));
         memcpy(&buffer[3], &money_net, sizeof(money_net));
+     buffer[5] = message->data.player_info.selected_skin;
 
-        memcpy(&buffer[5],
+     memcpy(&buffer[6],
                message->data.player_info.possessed_skins,
                TOTAL_SKIN_AMOUNT);
 
@@ -420,6 +437,19 @@ int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message *message, void **out
         /* No payload for now */
         buffer_len = 0;
         buffer = NULL;
+        break;
+    }
+
+    case EMAP_MSG_SHOP_ACTION:
+    {
+        buffer_len = sizeof(EMAP_PayloadShopAction);
+        buffer = malloc(buffer_len);
+        if (!buffer)
+        {
+            return -1;
+        }
+        buffer[0] = message->data.shop_action.action;
+        buffer[1] = message->data.shop_action.skin_index;
         break;
     }
 

@@ -67,7 +67,7 @@ int emap_helper_send_connect(int fd, const char *username){
  * @note Progression and money are converted with htons before being copied
  *       into the payload to ensure network byte order.
  */
-int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, uint16_t money, const uint8_t *skins, uint16_t skins_len){
+int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, uint16_t money, uint8_t selected_skin, const uint8_t *skins, uint16_t skins_len){
     EMAP_PayloadPlayerInfo pi;
     memset(&pi, 0, sizeof pi);
     pi.level = level;
@@ -75,6 +75,7 @@ int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, ui
     uint16_t money_n = htons(money);
     memcpy(&pi.progression, &prog_n, 2);
     memcpy(&pi.money, &money_n, 2);
+    pi.selected_skin = selected_skin;
     if (skins && skins_len > 0){
         if (skins_len > TOTAL_SKIN_AMOUNT) skins_len = TOTAL_SKIN_AMOUNT;
         memcpy(pi.possessed_skins, skins, skins_len);
@@ -206,4 +207,12 @@ int emap_helper_send_game_state(int fd, const void *payload, uint16_t len){
 int emap_helper_send_game_end(int fd, uint8_t result){
     EMAP_PayloadGameEnd p = { .has_won = result };
     return emap_send_packet(fd, EMAP_MSG_GAME_END, &p, 1);
+}
+
+int emap_helper_send_shop_action(int fd, uint8_t action, uint8_t skin_index){
+    EMAP_PayloadShopAction payload = {
+        .action = action,
+        .skin_index = skin_index
+    };
+    return emap_send_packet(fd, EMAP_MSG_SHOP_ACTION, &payload, sizeof payload);
 }

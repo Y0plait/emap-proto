@@ -29,6 +29,7 @@ typedef struct EMAP_Message {
         EMAP_PayloadMove move;              /**< Payload for @ref EMAP_MSG_MOVE. */
         EMAP_PayloadPlay play;              /**< Payload for @ref EMAP_MSG_PLAY. */
         EMAP_PayloadPlayerInfo player_info; /**< Payload for @ref EMAP_MSG_PLAYER_INFO. */
+        EMAP_PayloadShopAction shop_action; /**< Payload for @ref EMAP_MSG_SHOP_ACTION. */
     } data;
 
 } EMAP_Message;
