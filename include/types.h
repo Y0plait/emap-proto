@@ -49,7 +49,8 @@ typedef enum {
     EMAP_MSG_PLAY = 0x09,        /**< Turn notification. */
     EMAP_MSG_ILLEGAL_PLAY = 0x0A,/**< Invalid move notification. */
     EMAP_MSG_PLAYER_INFO = 0x0B, /**< Player profile synchronization. */
-    EMAP_MSG_SHOP_ACTION = 0x0C  /**< Shop purchase/equip action. */
+    EMAP_MSG_SHOP_ACTION = 0x0C, /**< Shop purchase/equip action. */
+    EMAP_MSG_PLAYER_DATA_UPDATE = 0x0D /**< Incremental player data refresh. */
 } EMAP_MessageType;
 
 /**
@@ -165,6 +166,14 @@ typedef struct {
     uint8_t action;      /**< Value from @ref EMAP_ShopActionType. */
     uint8_t skin_index;  /**< Target skin identifier. */
 } EMAP_PayloadShopAction;
+
+/**
+ * @brief Payload for @ref EMAP_MSG_PLAYER_DATA_UPDATE.
+ *
+ * Reuses the same layout as @ref EMAP_PayloadPlayerInfo so that both
+ * initial sync and subsequent updates share a common wire format.
+ */
+typedef EMAP_PayloadPlayerInfo EMAP_PayloadPlayerDataUpdate;
 
 /**
  * @brief Payload for @ref EMAP_MSG_ILLEGAL_PLAY

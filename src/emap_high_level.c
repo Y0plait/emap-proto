@@ -145,21 +145,23 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
     }
 
     case EMAP_MSG_PLAYER_INFO:
+    case EMAP_MSG_PLAYER_DATA_UPDATE:
     {
         /* On wire:
          *  byte 0: level (uint8_t)
          *  byte 1-2: progression (uint16_t, network order)
          *  byte 3-4: money       (uint16_t, network order)
-         *  byte 5: selected_skin (uint8_t)
-         *  byte 6..(6+TOTAL_SKIN_AMOUNT-1): possessed_skins[]
+         *  optional byte 5: selected_skin (uint8_t)
+         *  remaining bytes: possessed_skins[]
          */
-        const size_t expected_len =
+        const size_t legacy_len =
             1   /* level */
             + 2 /* progression */
             + 2 /* money */
-            + 1 /* selected skin */
             + TOTAL_SKIN_AMOUNT;
-        if (payload_len != expected_len)
+        const size_t extended_len = legacy_len + 1; /* includes selected_skin */
+
+        if (payload_len != legacy_len && payload_len != extended_len)
         {
             return -1;
         }
@@ -173,41 +175,22 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
         memcpy(&money_net, &p[3], sizeof(money_net));
         out->data.player_info.progression = ntohs(progression_net);
         out->data.player_info.money = ntohs(money_net);
-        out->data.player_info.selected_skin = p[5];
+
+        size_t skins_offset = 5;
+        if (payload_len == extended_len)
+        {
+            out->data.player_info.selected_skin = p[5];
+            skins_offset = 6;
+        }
+        else
+        {
+            out->data.player_info.selected_skin = 0;
+        }
 
         memcpy(out->data.player_info.possessed_skins,
-               &p[6],
+               &p[skins_offset],
                TOTAL_SKIN_AMOUNT);
 
-        break;
-    }
-
-    case EMAP_MSG_SHOP_ACTION:
-    {
-        if (payload_len != sizeof(EMAP_PayloadShopAction))
-        {
-            return -1;
-        }
-
-        out->data.shop_action.action = p[0];
-        out->data.shop_action.skin_index = p[1];
-        break;
-    }
-
-    case EMAP_MSG_CONNECT:
-    {
-        /* Depends on how you define the CONNECT payload.
-         * Let's say: username is fixed-size MAX_PLAYER_USERNAME_SIZE bytes.
-         */
-        if (payload_len > MAX_PLAYER_USERNAME_SIZE)
-        {
-            return -1;
-        }
-
-        /* IMPORTANT: in your on-wire struct use uint8_t/char, not uint16_t. */
-        memset(out->data.connect.username, 0, MAX_PLAYER_USERNAME_SIZE);
-        memcpy(out->data.connect.username, p, payload_len);
-        /* Now username is null-terminated (or padded) in the struct. */
         break;
     }
 
@@ -338,6 +321,7 @@ int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message *message, void **out
     }
 
     case EMAP_MSG_PLAYER_INFO:
+    case EMAP_MSG_PLAYER_DATA_UPDATE:
     {
         /* On wire:
          *  byte 0: level (uint8_t)
