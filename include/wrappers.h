@@ -172,3 +172,21 @@ int emap_helper_send_game_end(int fd, uint8_t result);               // EMAP_END
  * @return Non-negative on success, negative on error.
  */
 int emap_helper_send_shop_action(int fd, uint8_t action, uint8_t skin_index);
+
+/**
+ * @brief Send a lightweight player data update.
+ *
+ * Broadcast refreshed player stats (level, progression, money and skins) when
+ * only incremental changes occur.
+ *
+ * @param fd             File descriptor to send the message on.
+ * @param level          Player level value.
+ * @param progression    Player progression amount.
+ * @param money          Player money balance.
+ * @param selected_skin  Currently equipped skin identifier.
+ * @param skins          Pointer to array describing owned skins; may be NULL if len==0.
+ * @param skins_len      Number of bytes available in skins array.
+ *
+ * @return Non-negative on success, negative on error.
+ */
+int emap_helper_send_player_data_update(int fd, uint8_t level, uint16_t progression, uint16_t money, uint8_t selected_skin, const uint8_t *skins, uint16_t skins_len);
