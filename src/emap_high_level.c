@@ -120,6 +120,17 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
         break;
     }
 
+    case EMAP_MSG_CONNECT:
+    {
+        /* Payload: fixed-size username buffer */
+        if (payload_len != sizeof(EMAP_PayloadConnect))
+        {
+            return -1;
+        }
+        memcpy(out->data.connect.username, p, MAX_PLAYER_USERNAME_SIZE);
+        break;
+    }
+
     case EMAP_MSG_MOVE:
     {
         /* Payload: 2 bytes: coin_index, coin_pos */
@@ -151,72 +162,37 @@ int emap_decode_msg(uint8_t msg_type_raw, const void *payload, uint16_t payload_
          *  byte 0: level (uint8_t)
          *  byte 1-2: progression (uint16_t, network order)
          *  byte 3-4: money       (uint16_t, network order)
-         *  optional byte 5: selected_skin (uint8_t)
+         *  byte 5: selected_skin (uint8_t)
          *  remaining bytes: possessed_skins[]
          */
-        const size_t legacy_len = 1 + 2 + 2 + TOTAL_SKIN_AMOUNT;
-        const size_t extended_len = legacy_len + 1;
-        if (payload_len != legacy_len && payload_len != extended_len)
+        const size_t expected_len =
+            1   /* level */
+            + 2 /* progression */
+            + 2 /* money */
+            + 1 /* selected_skin */
+            + TOTAL_SKIN_AMOUNT;
+
+        if (payload_len != expected_len)
         {
             return -1;
         }
 
-        EMAP_PayloadPlayerInfo *dst =
-            (type == EMAP_MSG_PLAYER_DATA_UPDATE)
-                ? (EMAP_PayloadPlayerInfo *)&out->data.player_update
-                : &out->data.player_info;
-
-        dst->level = p[0];
+        out->data.player_info.level = p[0];
 
         uint16_t progression_net;
         uint16_t money_net;
 
         memcpy(&progression_net, &p[1], sizeof(progression_net));
         memcpy(&money_net, &p[3], sizeof(money_net));
-        dst->progression = ntohs(progression_net);
-        dst->money = ntohs(money_net);
+        out->data.player_info.progression = ntohs(progression_net);
+        out->data.player_info.money = ntohs(money_net);
 
-        size_t skins_offset = 5;
-        if (payload_len == extended_len)
-        {
-            dst->selected_skin = p[5];
-            skins_offset = 6;
-        }
-        else
-        {
-            dst->selected_skin = 0;
-        }
+        out->data.player_info.selected_skin = p[5];
 
-        memcpy(dst->possessed_skins,
-               &p[skins_offset],
+        memcpy(out->data.player_info.possessed_skins,
+               &p[6],
                TOTAL_SKIN_AMOUNT);
 
-        break;
-    }
-
-    case EMAP_MSG_SHOP_ACTION:
-    {
-        if (payload_len != sizeof(EMAP_PayloadShopAction))
-        {
-            return -1;
-        }
-
-        out->data.shop_action.action = p[0];
-        out->data.shop_action.skin_index = p[1];
-        break;
-    }
-
-    case EMAP_MSG_CONNECT:
-    {
-        if (payload_len != sizeof(EMAP_PayloadConnect))
-        {
-            return -1;
-        }
-
-        memcpy(out->data.connect.username,
-               p,
-               MAX_PLAYER_USERNAME_SIZE);
-        out->data.connect.username[MAX_PLAYER_USERNAME_SIZE - 1] = '\0';
         break;
     }
 
@@ -363,22 +339,17 @@ int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message *message, void **out
             return -1;
         }
 
-        const EMAP_PayloadPlayerInfo *src =
-            (msg_type == EMAP_MSG_PLAYER_DATA_UPDATE)
-                ? (const EMAP_PayloadPlayerInfo *)&message->data.player_update
-                : &message->data.player_info;
+        buffer[0] = message->data.player_info.level;
 
-        buffer[0] = src->level;
-
-        uint16_t progression_net = htons(src->progression);
-        uint16_t money_net = htons(src->money);
+        uint16_t progression_net = htons(message->data.player_info.progression);
+        uint16_t money_net = htons(message->data.player_info.money);
 
         memcpy(&buffer[1], &progression_net, sizeof(progression_net));
         memcpy(&buffer[3], &money_net, sizeof(money_net));
-        buffer[5] = src->selected_skin;
+     buffer[5] = message->data.player_info.selected_skin;
 
-        memcpy(&buffer[6],
-               src->possessed_skins,
+     memcpy(&buffer[6],
+               message->data.player_info.possessed_skins,
                TOTAL_SKIN_AMOUNT);
 
         break;
