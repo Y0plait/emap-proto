@@ -6,8 +6,8 @@
  * @brief Blocking send/receive primitives used by the EMAP transport layer.
  */
 
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 
 /**
  * @brief Send the entirety of a buffer over a stream socket.
@@ -21,7 +21,7 @@
  * @return Total number of bytes written on success, 0 if the peer closed the
  *         connection, or -1 on error (errno is preserved).
  */
-ssize_t emap_send_all(int sockfd, const void *buf, size_t len);
+ssize_t emap_send_all(int sockfd, const void* buf, size_t len);
 
 /**
  * @brief Receive an exact number of bytes from a stream socket.
@@ -35,6 +35,6 @@ ssize_t emap_send_all(int sockfd, const void *buf, size_t len);
  * @return Total number of bytes read on success, 0 if the peer closed the
  *         connection, or -1 on error (errno is preserved).
  */
-ssize_t emap_recv_all(int sock, void *buf, size_t buf_len);
+ssize_t emap_recv_all(int sock, void* buf, size_t buf_len);
 
 #endif

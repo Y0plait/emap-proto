@@ -17,18 +17,20 @@
  */
 
 #pragma once
-#include <stdint.h>
 #include "emap_high_level.h"
+#include <stdint.h>
 
 /**
  * @brief Send an ACK/NACK message.
  *
  * @param fd    File descriptor to send the message on (e.g. socket).
- * @param ok    Acknowledgement value: EMAP_MESSAGE_ACK_OK or EMAP_MESSAGE_ACK_NOK.
+ * @param ok    Acknowledgement value: EMAP_MESSAGE_ACK_OK or
+ * EMAP_MESSAGE_ACK_NOK.
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_ack(int fd, uint8_t ok); // ok = EMAP_MESSAGE_ACK_OK / EMAP_MESSAGE_ACK_NOK
+int emap_helper_send_ack(
+	int fd, uint8_t ok); // ok = EMAP_MESSAGE_ACK_OK / EMAP_MESSAGE_ACK_NOK
 
 /**
  * @brief Send a connect request with a username.
@@ -41,31 +43,34 @@ int emap_helper_send_ack(int fd, uint8_t ok); // ok = EMAP_MESSAGE_ACK_OK / EMAP
  * @return Non-negative on success, negative on error.
  */
 
-int emap_helper_send_connect(int fd, const char *username);
+int emap_helper_send_connect(int fd, const char* username);
 
 /**
  * @brief Send player information.
  *
- * Sends player-related metadata such as level, progression, money and available skins.
+ * Sends player-related metadata such as level, progression, money and available
+ * skins.
  *
  * @param fd            File descriptor to send the message on.
  * @param level         Player level.
  * @param progression   Player progression value.
  * @param money         Player money amount.
  * @param selected_skin Currently equipped skin index.
- * @param skins         Pointer to an array of skin identifiers. If skins_len is 0,
- *                      this pointer may be NULL.
+ * @param skins         Pointer to an array of skin identifiers. If skins_len is
+ * 0, this pointer may be NULL.
  * @param skins_len     Number of bytes (or elements) in the skins array.
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, uint16_t money, uint8_t selected_skin, const uint8_t *skins, uint16_t skins_len);
+int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression,
+								 uint16_t money, uint8_t selected_skin,
+								 const uint8_t* skins, uint16_t skins_len);
 
 /**
  * @brief Notify the peer that the client is joining a game.
  *
- * Sends a game-join request/message; typically used to indicate the client wants
- * to participate in matchmaking or join a lobby.
+ * Sends a game-join request/message; typically used to indicate the client
+ * wants to participate in matchmaking or join a lobby.
  *
  * @param fd    File descriptor to send the message on.
  *
@@ -91,12 +96,13 @@ int emap_helper_send_game_wait(int fd);
  * turn state applies.
  *
  * @param fd           File descriptor to send the message on.
- * @param is_starting  EMAP_PLAY_YOUR_TURN if this client starts / prepares to play,
- *                     otherwise NOT_YOUR_TURN (or similar defined constant).
+ * @param is_starting  EMAP_PLAY_YOUR_TURN if this client starts / prepares to
+ * play, otherwise NOT_YOUR_TURN (or similar defined constant).
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_game_start(int fd, uint8_t is_starting);        // EMAP_PLAY_YOUR_TURN / NOT_YOUR_TURN
+int emap_helper_send_game_start(
+	int fd, uint8_t is_starting); // EMAP_PLAY_YOUR_TURN / NOT_YOUR_TURN
 
 /**
  * @brief Inform the peer about play/turn state.
@@ -104,12 +110,13 @@ int emap_helper_send_game_start(int fd, uint8_t is_starting);        // EMAP_PLA
  * Use to indicate whether it is the recipient's turn or the sender's turn.
  *
  * @param fd         File descriptor to send the message on.
- * @param your_turn  EMAP_PLAY_YOUR_TURN if it is the recipient's turn, otherwise
- *                   NOT_YOUR_TURN (or the appropriate constant).
+ * @param your_turn  EMAP_PLAY_YOUR_TURN if it is the recipient's turn,
+ * otherwise NOT_YOUR_TURN (or the appropriate constant).
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_play(int fd, uint8_t your_turn);                // EMAP_PLAY_YOUR_TURN / NOT_YOUR_TURN
+int emap_helper_send_play(
+	int fd, uint8_t your_turn); // EMAP_PLAY_YOUR_TURN / NOT_YOUR_TURN
 
 /**
  * @brief Send an illegal-move or protocol-illegal notification.
@@ -147,7 +154,9 @@ int emap_helper_send_move(int fd, uint8_t start_pos, uint8_t new_pos);
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_game_state(int fd, const void *payload, uint16_t len); // si état vide: payload=NULL,len=0
+int emap_helper_send_game_state(
+	int fd, const void* payload,
+	uint16_t len); // si état vide: payload=NULL,len=0
 
 /**
  * @brief Send game end/result notification.
@@ -160,7 +169,8 @@ int emap_helper_send_game_state(int fd, const void *payload, uint16_t len); // s
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_game_end(int fd, uint8_t result);               // EMAP_END_GAME_WIN / LOSE
+int emap_helper_send_game_end(int fd,
+							  uint8_t result); // EMAP_END_GAME_WIN / LOSE
 
 /**
  * @brief Send a shop action requested by the client.
@@ -184,9 +194,14 @@ int emap_helper_send_shop_action(int fd, uint8_t action, uint8_t skin_index);
  * @param progression    Player progression amount.
  * @param money          Player money balance.
  * @param selected_skin  Currently equipped skin identifier.
- * @param skins          Pointer to array describing owned skins; may be NULL if len==0.
+ * @param skins          Pointer to array describing owned skins; may be NULL if
+ * len==0.
  * @param skins_len      Number of bytes available in skins array.
  *
  * @return Non-negative on success, negative on error.
  */
-int emap_helper_send_player_data_update(int fd, uint8_t level, uint16_t progression, uint16_t money, uint8_t selected_skin, const uint8_t *skins, uint16_t skins_len);
+int emap_helper_send_player_data_update(int fd, uint8_t level,
+										uint16_t progression, uint16_t money,
+										uint8_t selected_skin,
+										const uint8_t* skins,
+										uint16_t skins_len);

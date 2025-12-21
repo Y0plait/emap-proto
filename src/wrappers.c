@@ -1,6 +1,6 @@
-#include <string.h>
-#include <arpa/inet.h>
 #include "wrappers.h"
+#include <arpa/inet.h>
+#include <string.h>
 
 /**
  * @brief Send a general acknowledgment message.
@@ -17,8 +17,8 @@
  *       sends it using EMAP_MSG_GENERAL_ACK message type.
  */
 int emap_helper_send_ack(int fd, uint8_t ok) {
-    EMAP_PayloadGeneralACK p = { .ack_type = ok };
-    return emap_send_packet(fd, EMAP_MSG_GENERAL_ACK, &p, 1);
+	EMAP_PayloadGeneralACK p = {.ack_type = ok};
+	return emap_send_packet(fd, EMAP_MSG_GENERAL_ACK, &p, 1);
 }
 
 /**
@@ -36,13 +36,13 @@ int emap_helper_send_ack(int fd, uint8_t ok) {
  * @note The username is copied using strncpy and the payload is zeroed
  *       beforehand to ensure any unused bytes are NULs.
  */
-int emap_helper_send_connect(int fd, const char *username) {
-    EMAP_PayloadConnect p;
-    memset(&p, 0, sizeof p);
-    if (username){
-        strncpy((char*)p.username, username, sizeof p.username - 1);
-    }
-    return emap_send_packet(fd, EMAP_MSG_CONNECT, &p, sizeof p);
+int emap_helper_send_connect(int fd, const char* username) {
+	EMAP_PayloadConnect p;
+	memset(&p, 0, sizeof p);
+	if (username) {
+		strncpy((char*)p.username, username, sizeof p.username - 1);
+	}
+	return emap_send_packet(fd, EMAP_MSG_CONNECT, &p, sizeof p);
 }
 
 /**
@@ -67,20 +67,23 @@ int emap_helper_send_connect(int fd, const char *username) {
  * @note Progression and money are converted with htons before being copied
  *       into the payload to ensure network byte order.
  */
-int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, uint16_t money, uint8_t selected_skin, const uint8_t *skins, uint16_t skins_len) {
-    EMAP_PayloadPlayerInfo pi;
-    memset(&pi, 0, sizeof pi);
-    pi.level = level;
-    uint16_t prog_n = htons(progression);
-    uint16_t money_n = htons(money);
-    memcpy(&pi.progression, &prog_n, 2);
-    memcpy(&pi.money, &money_n, 2);
-    pi.selected_skin = selected_skin;
-    if (skins && skins_len > 0){
-        if (skins_len > TOTAL_SKIN_AMOUNT) skins_len = TOTAL_SKIN_AMOUNT;
-        memcpy(pi.possessed_skins, skins, skins_len);
-    }
-    return emap_send_packet(fd, EMAP_MSG_PLAYER_INFO, &pi, sizeof pi);
+int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression,
+								 uint16_t money, uint8_t selected_skin,
+								 const uint8_t* skins, uint16_t skins_len) {
+	EMAP_PayloadPlayerInfo pi;
+	memset(&pi, 0, sizeof pi);
+	pi.level = level;
+	uint16_t prog_n = htons(progression);
+	uint16_t money_n = htons(money);
+	memcpy(&pi.progression, &prog_n, 2);
+	memcpy(&pi.money, &money_n, 2);
+	pi.selected_skin = selected_skin;
+	if (skins && skins_len > 0) {
+		if (skins_len > TOTAL_SKIN_AMOUNT)
+			skins_len = TOTAL_SKIN_AMOUNT;
+		memcpy(pi.possessed_skins, skins, skins_len);
+	}
+	return emap_send_packet(fd, EMAP_MSG_PLAYER_INFO, &pi, sizeof pi);
 }
 
 /**
@@ -93,8 +96,8 @@ int emap_helper_send_player_info(int fd, uint8_t level, uint16_t progression, ui
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_game_join(int fd) {
-    // Payload vide (si struct vide)
-    return emap_send_packet(fd, EMAP_MSG_GAME_JOIN, NULL, 0);
+	// Payload vide (si struct vide)
+	return emap_send_packet(fd, EMAP_MSG_GAME_JOIN, NULL, 0);
 }
 
 /**
@@ -107,7 +110,7 @@ int emap_helper_send_game_join(int fd) {
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_game_wait(int fd) {
-    return emap_send_packet(fd, EMAP_MSG_GAME_WAIT, NULL, 0);
+	return emap_send_packet(fd, EMAP_MSG_GAME_WAIT, NULL, 0);
 }
 
 /**
@@ -122,8 +125,8 @@ int emap_helper_send_game_wait(int fd) {
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_game_start(int fd, uint8_t is_starting) {
-    EMAP_PayloadGameStart p = { .is_starting = is_starting };
-    return emap_send_packet(fd, EMAP_MSG_GAME_START, &p, 1);
+	EMAP_PayloadGameStart p = {.is_starting = is_starting};
+	return emap_send_packet(fd, EMAP_MSG_GAME_START, &p, 1);
 }
 
 /**
@@ -138,8 +141,8 @@ int emap_helper_send_game_start(int fd, uint8_t is_starting) {
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_play(int fd, uint8_t your_turn) {
-    EMAP_PayloadPlay p = { .play_type = your_turn };
-    return emap_send_packet(fd, EMAP_MSG_PLAY, &p, 1);
+	EMAP_PayloadPlay p = {.play_type = your_turn};
+	return emap_send_packet(fd, EMAP_MSG_PLAY, &p, 1);
 }
 
 /**
@@ -153,8 +156,8 @@ int emap_helper_send_play(int fd, uint8_t your_turn) {
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_illegal(int fd) {
-    EMAP_PayloadGeneralACK p = { .ack_type = EMAP_MESSAGE_ACK_NOK };
-    return emap_send_packet(fd, EMAP_MSG_ILLEGAL_PLAY, &p, 1);
+	EMAP_PayloadGeneralACK p = {.ack_type = EMAP_MESSAGE_ACK_NOK};
+	return emap_send_packet(fd, EMAP_MSG_ILLEGAL_PLAY, &p, 1);
 }
 
 /**
@@ -170,8 +173,8 @@ int emap_helper_send_illegal(int fd) {
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_move(int fd, uint8_t start_pos, uint8_t new_pos) {
-    EMAP_PayloadMove m = { .coin_index = start_pos, .coin_pos = new_pos };
-    return emap_send_packet(fd, EMAP_MSG_MOVE, &m, sizeof m);
+	EMAP_PayloadMove m = {.coin_index = start_pos, .coin_pos = new_pos};
+	return emap_send_packet(fd, EMAP_MSG_MOVE, &m, sizeof m);
 }
 
 /**
@@ -181,7 +184,8 @@ int emap_helper_send_move(int fd, uint8_t start_pos, uint8_t new_pos) {
  * packet. This function does not interpret or validate the payload contents.
  *
  * @param fd     File descriptor (socket) to send the packet on.
- * @param payload Pointer to the raw payload data to send (may be NULL if len==0).
+ * @param payload Pointer to the raw payload data to send (may be NULL if
+ * len==0).
  * @param len     Length in bytes of payload.
  *
  * @return The value returned by emap_send_packet (propagates success/error).
@@ -189,8 +193,8 @@ int emap_helper_send_move(int fd, uint8_t start_pos, uint8_t new_pos) {
  * @note The caller is responsible for ensuring the payload format and length
  *       conform to the EMAP game-state specification.
  */
-int emap_helper_send_game_state(int fd, const void *payload, uint16_t len) {
-    return emap_send_packet(fd, EMAP_MSG_GAME_STATE, payload, len);
+int emap_helper_send_game_state(int fd, const void* payload, uint16_t len) {
+	return emap_send_packet(fd, EMAP_MSG_GAME_STATE, payload, len);
 }
 
 /**
@@ -205,8 +209,8 @@ int emap_helper_send_game_state(int fd, const void *payload, uint16_t len) {
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_game_end(int fd, uint8_t result) {
-    EMAP_PayloadGameEnd p = { .has_won = result };
-    return emap_send_packet(fd, EMAP_MSG_GAME_END, &p, 1);
+	EMAP_PayloadGameEnd p = {.has_won = result};
+	return emap_send_packet(fd, EMAP_MSG_GAME_END, &p, 1);
 }
 
 /**
@@ -222,41 +226,48 @@ int emap_helper_send_game_end(int fd, uint8_t result) {
  * @return The value returned by emap_send_packet (propagates success/error).
  */
 int emap_helper_send_shop_action(int fd, uint8_t action, uint8_t skin_index) {
-    EMAP_PayloadShopAction payload = {
-        .action = action,
-        .skin_index = skin_index
-    };
-    return emap_send_packet(fd, EMAP_MSG_SHOP_ACTION, &payload, sizeof payload);
+	EMAP_PayloadShopAction payload = {.action = action,
+									  .skin_index = skin_index};
+	return emap_send_packet(fd, EMAP_MSG_SHOP_ACTION, &payload, sizeof payload);
 }
 
 /**
  * @brief Notify the peer about updated player data.
  *
  * Sends EMAP_MSG_PLAYER_DATA_UPDATE so the client can refresh level, progress,
- * money, selected skin, and owned skins without going back to the initial state of askin the initial 
- * player info.
+ * money, selected skin, and owned skins without going back to the initial state
+ * of askin the initial player info.
  * @param fd             File descriptor (socket) to send the packet on.
  * @param level          Player level (uint8_t).
- * @param progression    Player progression (uint16_t, converted to network order).
- * @param money          Player money amount (uint16_t, converted to network order).
+ * @param progression    Player progression (uint16_t, converted to network
+ * order).
+ * @param money          Player money amount (uint16_t, converted to network
+ * order).
  * @param selected_skin  Currently equipped skin id.
- * @param skins          Pointer to skin ownership array (may be NULL when len==0).
- * @param skins_len      Number of bytes in skins array; truncated to TOTAL_SKIN_AMOUNT.
+ * @param skins          Pointer to skin ownership array (may be NULL when
+ * len==0).
+ * @param skins_len      Number of bytes in skins array; truncated to
+ * TOTAL_SKIN_AMOUNT.
  *
  * @return The value returned by emap_send_packet (propagates success/error).
  */
-int emap_helper_send_player_data_update(int fd, uint8_t level, uint16_t progression, uint16_t money, uint8_t selected_skin, const uint8_t *skins, uint16_t skins_len) {
-    EMAP_PayloadPlayerDataUpdate pi;
-    memset(&pi, 0, sizeof pi);
-    pi.level = level;
-    uint16_t prog_n = htons(progression);
-    uint16_t money_n = htons(money);
-    memcpy(&pi.progression, &prog_n, 2);
-    memcpy(&pi.money, &money_n, 2);
-    pi.selected_skin = selected_skin;
-    if (skins && skins_len > 0){
-        if (skins_len > TOTAL_SKIN_AMOUNT) skins_len = TOTAL_SKIN_AMOUNT;
-        memcpy(pi.possessed_skins, skins, skins_len);
-    }
-    return emap_send_packet(fd, EMAP_MSG_PLAYER_DATA_UPDATE, &pi, sizeof pi);
+int emap_helper_send_player_data_update(int fd, uint8_t level,
+										uint16_t progression, uint16_t money,
+										uint8_t selected_skin,
+										const uint8_t* skins,
+										uint16_t skins_len) {
+	EMAP_PayloadPlayerDataUpdate pi;
+	memset(&pi, 0, sizeof pi);
+	pi.level = level;
+	uint16_t prog_n = htons(progression);
+	uint16_t money_n = htons(money);
+	memcpy(&pi.progression, &prog_n, 2);
+	memcpy(&pi.money, &money_n, 2);
+	pi.selected_skin = selected_skin;
+	if (skins && skins_len > 0) {
+		if (skins_len > TOTAL_SKIN_AMOUNT)
+			skins_len = TOTAL_SKIN_AMOUNT;
+		memcpy(pi.possessed_skins, skins, skins_len);
+	}
+	return emap_send_packet(fd, EMAP_MSG_PLAYER_DATA_UPDATE, &pi, sizeof pi);
 }
