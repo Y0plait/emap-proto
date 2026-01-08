@@ -1,41 +1,113 @@
-# Compiler
+#
+# 'make'        build executable file 'main'
+# 'make clean'  removes all .o and executable files
+#
+
+# define the C compiler to use
 CC = gcc
-CFLAGS = -Wall -Wextra -g
 
-# Dossiers internes
-SRC = src
-INCLUDE = include
-BUILD_DIR = build
+# define any compile-time flags
+CFLAGS	:= -Wall -Wextra -g
 
-# Sortie
-LIB_NAME = libemap.a
-LIB_OUTPUT = $(BUILD_DIR)/$(LIB_NAME)
+# define source directory
+SRC		:= src
 
-# Fichiers sources et objets
-SOURCES = $(wildcard $(SRC)/*.c)
-OBJECTS = $(SOURCES:$(SRC)/%.c=$(BUILD_DIR)/%.o)
+# define include directory
+INCLUDE	:= include
 
-# ---------- Cible par défaut ----------
-all: $(LIB_OUTPUT)
+# define lib directory
+LIB		:= lib
 
-# ---------- Construction de la library ----------
-$(LIB_OUTPUT): $(OBJECTS)
-	@mkdir -p $(BUILD_DIR)
-	ar rcs $@ $^
+# define build directory
+BUILD_DIR	:= build
 
-# ---------- Compilation des fichiers .c ----------
+# define output directory
+OUTPUT	:= output
+
+ifeq ($(OS),Windows_NT)
+SOURCEDIRS	:= $(SRC)
+INCLUDEDIRS	:= $(INCLUDE)
+FIXPATH = $(subst /,\,$1)
+RM			:= del /q /f
+MD	:= mkdir
+AR	:= ar
+else
+SOURCEDIRS	:= $(shell find $(SRC) -type d)
+INCLUDEDIRS	:= $(shell find $(INCLUDE) -type d)
+FIXPATH = $1
+RM = rm -rf
+MD	:= mkdir -p
+AR	:= ar
+endif
+
+# Library name
+LIBNAME		:= emap
+STATIC_LIB	:= $(BUILD_DIR)/lib$(LIBNAME).a
+
+# Test executable
+TEST_MAIN	:= emap_tests
+TEST_OUTPUT	:= $(OUTPUT)/$(TEST_MAIN)
+TEST_SOURCES	:= tests/test_emap.c $(SRC)/emap_high_level.c $(SRC)/emap_low_level.c
+
+# define any directories containing header files other than /usr/include
+INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%))
+
+# define the C source files
+SOURCES		:= $(wildcard $(patsubst %,%/*.c, $(SOURCEDIRS)))
+
+# define the C object files 
+OBJECTS		:= $(patsubst $(SRC)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
+
+# define the dependency output files
+DEPS		:= $(OBJECTS:.o=.d)
+
+#
+# The following part of the makefile is generic; it can be used to 
+# build any executable just by changing the definitions above and by
+# deleting dependencies appended to the file from 'make depend'
+#
+
+build: $(STATIC_LIB)
+	@echo "Build complete: $(STATIC_LIB)"
+
+build-dir:
+	$(MD) $(BUILD_DIR)
+
+$(OUTPUT):
+	$(MD) $(OUTPUT)
+
+$(STATIC_LIB): build-dir $(OBJECTS)
+	$(AR) rcs $(STATIC_LIB) $(OBJECTS)
+	@echo "Static library created: $(STATIC_LIB)"
+
+# include all .d files
+-include $(DEPS)
+
+# this is a suffix replacement rule for building .o's and .d's from .c's
+# it uses automatic variables $<: the name of the prerequisite of
+# the rule(a .c file) and $@: the name of the target of the rule (a .o file) 
+# -MMD generates dependency output files same name as the .o file
+# (see the gnu make manual section about automatic variables)
 $(BUILD_DIR)/%.o: $(SRC)/%.c
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -I$(INCLUDE) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c -MMD $< -o $@
 
-# ---------- Tests ----------
-test: $(LIB_OUTPUT)
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -I$(INCLUDE) tests/test_emap.c $(LIB_OUTPUT) -o $(BUILD_DIR)/test_emap
-	@./$(BUILD_DIR)/test_emap
+test: $(OUTPUT) $(TEST_OUTPUT)
+	./$(TEST_OUTPUT)
+	@echo "Test suite completed"
 
-# ---------- Nettoyage ----------
+$(TEST_OUTPUT): $(TEST_SOURCES)
+	@mkdir -p $(OUTPUT)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST_OUTPUT) $(TEST_SOURCES)
+
+.PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR)
+	$(RM) $(call FIXPATH,$(BUILD_DIR))/*
+	$(RM) $(call FIXPATH,$(OUTPUT))/*
+	@echo "Cleanup complete!"
 
-.PHONY: all clean test
+doc:
+	doxygen Doxyfile
+	@echo "Documentation generated in docs/html/index.html"
+
+.PHONY: build build-dir clean doc test
