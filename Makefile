@@ -28,8 +28,14 @@ $(BUILD_DIR)/%.o: $(SRC)/%.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE) -c $< -o $@
 
+# ---------- Tests ----------
+test: $(LIB_OUTPUT)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -I$(INCLUDE) tests/test_emap.c $(LIB_OUTPUT) -o $(BUILD_DIR)/test_emap
+	@./$(BUILD_DIR)/test_emap
+
 # ---------- Nettoyage ----------
 clean:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all clean
+.PHONY: all clean test
