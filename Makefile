@@ -47,7 +47,14 @@ STATIC_LIB	:= $(BUILD_DIR)/lib$(LIBNAME).a
 # Test executable
 TEST_MAIN	:= emap_tests
 TEST_OUTPUT	:= $(OUTPUT)/$(TEST_MAIN)
-TEST_SOURCES	:= tests/test_emap.c $(SRC)/emap_high_level.c $(SRC)/emap_low_level.c
+TEST_SOURCES	:= tests/test_emap.c \
+				   tests/test_encode_decode.c \
+				   tests/test_error_handling.c \
+				   tests/test_byte_order.c \
+				   tests/test_packet.c \
+				   tests/test_socket.c \
+				   $(SRC)/emap_high_level.c \
+				   $(SRC)/emap_low_level.c
 
 # define any directories containing header files other than /usr/include
 INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%))
@@ -98,7 +105,7 @@ test: $(OUTPUT) $(TEST_OUTPUT)
 
 $(TEST_OUTPUT): $(TEST_SOURCES)
 	@mkdir -p $(OUTPUT)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST_OUTPUT) $(TEST_SOURCES)
+	$(CC) $(CFLAGS) $(INCLUDES) -I tests -o $(TEST_OUTPUT) $(TEST_SOURCES)
 
 .PHONY: clean
 clean:
