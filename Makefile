@@ -117,4 +117,10 @@ doc:
 	doxygen Doxyfile
 	@echo "Documentation generated in docs/html/index.html"
 
-.PHONY: build build-dir clean doc test
+pdf: doc
+	@echo "Building PDF from LaTeX..."
+	cd docs/latex && make
+	cp docs/latex/refman.pdf docs/EMAP_Documentation.pdf
+	@echo "PDF generated: docs/EMAP_Documentation.pdf"
+
+.PHONY: build build-dir clean doc pdf test
