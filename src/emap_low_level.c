@@ -30,10 +30,15 @@ ssize_t emap_send_all(int sock, const void* buf, size_t buf_len) {
 	const uint8_t* ptr = buf;
 
 	while (total < buf_len) {
-		ssize_t n = send(sock, ptr + total, buf_len - total, 0);
+		/* MSG_NOSIGNAL évite le signal SIGPIPE si le socket est fermé */
+		ssize_t n = send(sock, ptr + total, buf_len - total, MSG_NOSIGNAL);
 		if (n < 0) {
 			if (errno == EINTR) {
-				continue; /* interrup­tion, on réessaie */
+				continue; /* interruption, on réessaie */
+			}
+			if (errno == EPIPE || errno == ECONNRESET) {
+				/* Connexion fermée par le pair */
+				return 0;
 			}
 			return -1; /* vraie erreur */
 		}
@@ -74,6 +79,10 @@ ssize_t emap_recv_all(int sock, void* buf, size_t buf_len) {
 		if (n < 0) {
 			if (errno == EINTR) {
 				continue;
+			}
+			if (errno == ECONNRESET) {
+				/* Connexion réinitialisée par le pair */
+				return 0;
 			}
 			return -1;
 		}
