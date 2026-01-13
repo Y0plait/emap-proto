@@ -89,8 +89,8 @@ int emap_recv_packet(int sock, uint8_t* type_out, void** payload_out,
 	return 0;
 }
 
-int emap_decode_msg(uint8_t msg_type_raw, const void* payload, uint16_t payload_len,
-					EMAP_Message* out) {
+int emap_decode_msg(uint8_t msg_type_raw, const void* payload,
+					uint16_t payload_len, EMAP_Message* out) {
 
 	const uint8_t* p = payload;
 	EMAP_MessageType type = (EMAP_MessageType)msg_type_raw;
@@ -234,8 +234,8 @@ int emap_decode_msg(uint8_t msg_type_raw, const void* payload, uint16_t payload_
 	return 0;
 }
 
-int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message* message, void** out,
-					uint16_t* out_len) {
+int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message* message,
+					void** out, uint16_t* out_len) {
 	if (!message || !out || !out_len) {
 		return -1;
 	}
@@ -316,7 +316,8 @@ int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message* message, void** out
 		if (!buffer) {
 			return -1;
 		}
-		memcpy(buffer, message->data.connect.username, MAX_PLAYER_USERNAME_SIZE);
+		memcpy(buffer, message->data.connect.username,
+			   MAX_PLAYER_USERNAME_SIZE);
 		break;
 	}
 
