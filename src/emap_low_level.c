@@ -1,3 +1,12 @@
+/**
+ * @file emap_low_level.c
+ * @brief Low-level socket I/O functions for EMAP protocol.
+ *
+ * Provides reliable send and receive functions that ensure all data is
+ * transmitted/received over TCP sockets, handling fragmentation, signals,
+ * connection issues, and partial I/O operations.
+ */
+
 #include <errno.h>
 #include <stdint.h>
 #include <sys/socket.h>

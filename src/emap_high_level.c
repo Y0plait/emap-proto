@@ -1,3 +1,14 @@
+/**
+ * @file emap_high_level.c
+ * @brief High-level EMAP message encoding and decoding implementation.
+ *
+ * Provides functions for constructing and parsing EMAP protocol packets,
+ * including sending/receiving complete packets over sockets and encoding/
+ * decoding messages between wire format and structured representations.
+ * Handles protocol validation (magic bytes, version), payload size
+ * conversions, and message-type-specific serialization.
+ */
+
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +18,28 @@
 #include "../include/emap_message.h"
 #include "../include/types.h"
 
+/**
+ * @brief Send an EMAP packet with header and payload over a socket.
+ *
+ * Constructs and transmits an EMAP packet consisting of a standard header
+ * (magic bytes, version, message type, payload size) followed by the payload
+ * data. Handles network byte order conversion for the payload size field.
+ *
+ * @param sock        Socket file descriptor to send the packet on.
+ * @param msg_type    The EMAP message type code (EMAP_MessageType enum value).
+ * @param payload     Pointer to the payload data to send (may be NULL if
+ *                    payload_len is 0).
+ * @param payload_len Size of the payload in bytes. If >0 but payload is NULL,
+ *                    returns error.
+ *
+ * @return Success or failure status.
+ * @retval 0   Packet sent successfully.
+ * @retval -1  Error: invalid parameters, send failed, or socket error.
+ *
+ * @note This function uses emap_send_all internally to ensure all data is
+ *       transmitted even if the socket fragments the packet across multiple
+ *       TCP segments.
+ */
 int emap_send_packet(int sock, uint8_t msg_type, const void* payload,
 					 uint16_t payload_len) {
 	if (payload_len > 0 && payload == NULL) {
@@ -36,6 +69,30 @@ int emap_send_packet(int sock, uint8_t msg_type, const void* payload,
 	return 0;
 }
 
+/**
+ * @brief Receive and parse an EMAP packet from a socket.
+ *
+ * Receives the EMAP packet header from the socket, validates magic bytes and
+ * protocol version, then receives the payload if present. The payload is
+ * allocated on the heap and must be freed by the caller.
+ *
+ * @param sock            Socket file descriptor to receive from.
+ * @param type_out        Pointer to store the received message type (uint8_t).
+ * @param payload_out     Pointer to store the allocated payload buffer.
+ *                        Set to NULL if no payload received. Caller must
+ *                        free this.
+ * @param payload_len_out Pointer to store the actual payload size in bytes.
+ *
+ * @return Success or failure status.
+ * @retval 0   Packet received and parsed successfully.
+ * @retval -1  Error: invalid magic bytes/version, socket error, allocation
+ *             failure, or payload exceeds maximum size (EMAP_MAX_PAYLOAD_SIZE).
+ *
+ * @note The caller is responsible for freeing the allocated payload buffer.
+ *       Payload allocation only occurs if payload_len > 0.
+ *       This function uses emap_recv_all internally, which blocks until
+ *       all data is received.
+ */
 int emap_recv_packet(int sock, uint8_t* type_out, void** payload_out,
 					 uint16_t* payload_len_out) {
 
@@ -89,6 +146,32 @@ int emap_recv_packet(int sock, uint8_t* type_out, void** payload_out,
 	return 0;
 }
 
+/**
+ * @brief Decode a raw EMAP payload into a structured message.
+ *
+ * Parses the raw payload bytes according to the message type, validating
+ * payload size, performing any necessary byte-order conversions, and
+ * populating the corresponding fields in the EMAP_Message union structure.
+ *
+ * @param msg_type_raw  The raw message type byte from the EMAP header.
+ * @param payload       Pointer to the raw payload data (may be NULL if
+ *                      payload_len is 0).
+ * @param payload_len   Size of the payload in bytes.
+ * @param out           Pointer to EMAP_Message structure to populate with
+ *                      decoded data.
+ *
+ * @return Success or failure status.
+ * @retval 0   Payload decoded successfully and message populated.
+ * @retval -1  Error: unknown message type, invalid payload size for the
+ *             message type, or malformed data.
+ *
+ * @note This function performs message-type-specific validation. Each message
+ *       type has an expected payload layout and size. Network byte order
+ *       (big-endian) values like progression and money are converted to
+ *       host byte order using ntohs().
+ *
+ * @see emap_encode_msg
+ */
 int emap_decode_msg(uint8_t msg_type_raw, const void* payload,
 					uint16_t payload_len, EMAP_Message* out) {
 
@@ -234,6 +317,35 @@ int emap_decode_msg(uint8_t msg_type_raw, const void* payload,
 	return 0;
 }
 
+/**
+ * @brief Encode a structured EMAP message into a raw payload buffer.
+ *
+ * Converts a structured EMAP_Message into its wire-format representation
+ * (raw bytes), allocating a new buffer on the heap. Handles message-type-
+ * specific serialization, byte-order conversions, and payload construction.
+ *
+ * @param msg_type     The EMAP message type to encode (EMAP_MessageType).
+ * @param message      Pointer to the EMAP_Message structure containing the
+ *                     data to encode.
+ * @param out          Pointer to store the allocated payload buffer. Set to
+ *                     NULL if no payload (caller must check).
+ * @param out_len      Pointer to store the size of the allocated buffer in
+ *                     bytes.
+ *
+ * @return Success or failure status.
+ * @retval 0   Message encoded successfully. out contains the allocated
+ *             buffer and out_len contains its size.
+ * @retval -1  Error: NULL parameters, unknown message type, or memory
+ *             allocation failure.
+ *
+ * @note The caller is responsible for freeing the allocated buffer via free().
+ *       Some message types have no payload; in these cases, out is set to
+ *       NULL and out_len is set to 0.
+ *       Network byte order (big-endian) conversions are performed for
+ *       multi-byte values using htons().
+ *
+ * @see emap_decode_msg
+ */
 int emap_encode_msg(EMAP_MessageType msg_type, EMAP_Message* message,
 					void** out, uint16_t* out_len) {
 	if (!message || !out || !out_len) {

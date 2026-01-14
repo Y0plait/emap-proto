@@ -1,3 +1,12 @@
+/**
+ * @file wrappers.c
+ * @brief Convenience wrapper functions for EMAP packet construction.
+ *
+ * Provides helper functions that simplify creation and sending of common
+ * EMAP message types (ACK, CONNECT, MOVE, GAME_STATE, etc.). Each wrapper
+ * constructs the appropriate payload structure and invokes emap_send_packet.
+ */
+
 #include "wrappers.h"
 #include <arpa/inet.h>
 #include <string.h>
