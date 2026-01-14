@@ -1,5 +1,7 @@
 # EMAP
 
+[![pipeline status](https://gitlab.com/sco-chartreux/3ics-25-26/moulin-anton/projet-c/emap/badges/main/pipeline.svg)](https://gitlab.com/sco-chartreux/3ics-25-26/moulin-anton/projet-c/emap/-/commits/main)
+
 ## Présentation
 
 EMAP est un projet système développé dans le cadre du cours C Système (S5).
